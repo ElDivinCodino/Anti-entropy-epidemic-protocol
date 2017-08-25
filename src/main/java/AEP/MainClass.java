@@ -10,6 +10,8 @@ import com.typesafe.config.ConfigFactory;
 import AEP.nodeUtilities.Utilities;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class is useful to both setup the network and design the operations performed by the participants
@@ -17,7 +19,9 @@ import java.net.InetAddress;
 public class MainClass {
 
     private int n = 2; // number of nodes/participants belonging to the network
-    private int p = 2; // number of (key,value) pairs for each participant
+    private int p = 5; // number of (key,value) pairs for each participant
+
+    private List<ActorRef> ps = new ArrayList<ActorRef>();
 
     public static void main(String[] args) {
 
@@ -40,7 +44,7 @@ public class MainClass {
 
         // Set up participant states and the actor system
 
-        Integer randomPort = Utilities.getAvailablePort(10000, 10100);
+        Integer randomPort = Utilities.getRandomNum(10000, 10100);
         Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + randomPort);
 
         ActorSystem system = ActorSystem.create("AEP", custom.withFallback(myConfig));
@@ -48,8 +52,12 @@ public class MainClass {
         // Set up all the participants
         for (int i = 0; i < n; i++) {
             participantName = "Participant_" + i;
-            ActorRef node = system.actorOf(Props.create(Participant.class, destinationPath), participantName);
-            node.tell(new SetupNetMessage(n, p), null);
+            ActorRef node = system.actorOf(Props.create(Participant.class, destinationPath + "/" + participantName, i), participantName);
+            ps.add(node);
+        }
+
+        for (ActorRef participant : ps) {
+            participant.tell(new SetupNetMessage(p, ps), null);
         }
     }
 }

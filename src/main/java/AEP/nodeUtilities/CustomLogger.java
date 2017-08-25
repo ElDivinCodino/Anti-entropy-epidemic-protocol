@@ -3,7 +3,7 @@ package AEP.nodeUtilities;
 /**
  * Useful to select what to show during the execution, in order to avoid verbose information
  */
-public class DynamoLogger {
+public class CustomLogger {
     public static final String ANSI_PREFIX = "\u001B[";
 
     public static final String ANSI_RESET = ANSI_PREFIX + "0m";
@@ -17,7 +17,7 @@ public class DynamoLogger {
     private LOG_LEVEL level;
     private String prefix;
 
-    public DynamoLogger(){
+    public CustomLogger(){
         this.prefix = null;
     }
 

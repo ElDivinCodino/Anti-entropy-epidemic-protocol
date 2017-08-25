@@ -47,12 +47,8 @@ public class Utilities {
      *
      * @return a random available port between the thresholds
      */
-    public static Integer getAvailablePort(Integer min, Integer max){
-        Integer randomNum = ThreadLocalRandom.current().nextInt(min, max + 1);
-        while (!available(randomNum)){
-            randomNum = ThreadLocalRandom.current().nextInt(min, max + 1);
-        }
-        return randomNum;
+    public static Integer getRandomNum(Integer min, Integer max){
+        return ThreadLocalRandom.current().nextInt(min, max + 1);
     }
 
 }

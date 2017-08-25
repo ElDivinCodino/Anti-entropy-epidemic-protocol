@@ -8,28 +8,64 @@ import java.util.*;
  */
 public class Storage {
 
-    private ArrayList<ArrayList<Couple>> participantStates = new ArrayList<>();
+    private TreeMap<Integer, TreeMap<Integer, Couple>> participantStates = new TreeMap<>();
 
     private String pathname;
-    private int participantsNumber, couplesNumber;
+    private int participantsNumber, couplesNumber, id;
 
-    public Storage(String pathname, int participantsNumber, int couplesNumber) {
+    public Storage(String pathname, int participantsNumber, int couplesNumber, int id) {
         this.pathname = pathname;
         this.participantsNumber = participantsNumber;
         this.couplesNumber = couplesNumber;
+        this.id = id;
         initializeStates(participantsNumber, couplesNumber);
     }
 
     private void initializeStates(int n, int p) {
 
+        Random r = new Random();
+
         // initialize participants' states
         for(int i = 0; i < n; i++) {
-            participantStates.add(new ArrayList<Couple>());
+            TreeMap<Integer, Couple> newTreemap = new TreeMap<>();
+
             for(int j = 0; j < p; j++) {
-                participantStates.get(i).add(new Couple(null, 0));
+                if (i == id) {
+                    newTreemap.put(j, new Couple(Utilities.getRandomNum(0, 1000).toString(), 1));
+                } else {
+                    newTreemap.put(j, new Couple(null, 0));
+                }
             }
+
+            participantStates.put(i, newTreemap);
         }
         // save the items to disk
+        save();
+    }
+
+    public TreeMap<Integer, TreeMap<Integer, Couple>> createDigest() {
+
+        TreeMap<Integer, TreeMap<Integer, Couple>> digest = (TreeMap<Integer, TreeMap<Integer, Couple>>) participantStates.clone();
+        for (Map.Entry<Integer, TreeMap<Integer, Couple>> participantStates : digest.entrySet()) {
+            for (Map.Entry<Integer, Couple> state : participantStates.getValue().entrySet()) {
+                state.getValue().setValue(null);
+            }
+        }
+
+        return digest;
+    }
+
+    public void reconciliation (TreeMap<Integer, TreeMap<Integer, Couple>> peerStates) {
+
+        for (Map.Entry<Integer, TreeMap<Integer, Couple>> state : peerStates.entrySet()) {
+            for (Map.Entry<Integer, Couple> delta : state.getValue().entrySet()) {
+                Couple couple = delta.getValue();
+                if (couple.getVersion() > participantStates.get(state.getKey()).get(delta.getKey()).getVersion()) {
+                    System.out.println("Replacing " + participantStates.get(state.getKey()).get(delta.getKey()) + " with "+ couple);
+                    participantStates.get(state.getKey()).get(delta.getKey()).updateCouple(couple);
+                }
+            }
+        }
         save();
     }
 
@@ -85,20 +121,31 @@ public class Storage {
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(/*DynamoLogger.ANSI_WHITE + */"Storage: \n"/* + DynamoLogger.ANSI_RESET*/);
+        sb.append(/*CustomLogger.ANSI_WHITE + */"Storage: \n"/* + CustomLogger.ANSI_RESET*/);
         sb.append("\tParticipant name|");
         for(int j = 0; j < couplesNumber; j++) {
             sb.append("\tKey " + j + "\t|");
         }
-        sb.append("");
-        for(int i = 0; i < participantsNumber; i++) {
-            sb.append("\n\tParticipant_" + i + " \t|");
-            for(int j = 0; j < couplesNumber; j++) {
-                sb.append(" " + participantStates.get(i).get(j) + " |");
-            }
-        }
+        sb.append("\n");
+        sb.append(participantStates.toString());
 
         return sb.toString();
     }
 
+    public TreeMap<Integer, TreeMap<Integer, Couple>> computeDifferences(TreeMap<Integer, TreeMap<Integer, Couple>> digest) {
+
+        TreeMap<Integer, TreeMap<Integer, Couple>> toBeUpdated = (TreeMap<Integer, TreeMap<Integer, Couple>>) participantStates.clone();
+
+        for (Map.Entry<Integer, TreeMap<Integer, Couple>> state : digest.entrySet()) {
+            for (Map.Entry<Integer, Couple> delta : state.getValue().entrySet()) {
+                Couple couple = delta.getValue();
+                // OPTIMIZATION: greater or equal instead of only greater because otherwise we send also couples with the same version number
+                if (couple.getVersion() >= participantStates.get(state.getKey()).get(delta.getKey()).getVersion()) {
+                    toBeUpdated.get(state.getKey()).get(delta.getKey()).updateCouple(new Couple(null, 0));
+                }
+            }
+        }
+
+        return toBeUpdated;
+    }
 }
