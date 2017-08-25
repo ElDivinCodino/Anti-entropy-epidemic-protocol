@@ -1,6 +1,6 @@
-##DS2-Project
+## DS2-Project
 
-####Efficient Reconciliation and Flow Control for Anti-Entropy Protocols
+#### Efficient Reconciliation and Flow Control for Anti-Entropy Protocols
 
 Gossip protocols, useful for replicating state without string consistency requirements. 
 
@@ -30,7 +30,7 @@ Each participant has a set of *Peers* that is gossips with. Periodically a proce
 
 **delta**: a tuple (p, k, v, n)
 
-###Reconciliation (improved)
+### Reconciliation (improved)
 
 #### Precise reconciliation
 
@@ -38,7 +38,7 @@ Send only necessary updates.
 
 Send exactly those mappings that are more recent than those of the peer.
 
-####Scuttlebutt reconciliation
+#### Scuttlebutt reconciliation
 
 Ogni qual volta un processo vuole aggiornare un elemento locale, deve utilizzare un numero di version più alto del massimo attuale.
 
