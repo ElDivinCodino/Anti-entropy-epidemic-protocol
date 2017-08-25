@@ -1,0 +1,83 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '1.2.4'
+}
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+    compile group: 'com.typesafe.akka', name: 'akka-actor_2.11', version: '2.4.17'
+    compile group: 'com.typesafe.akka', name: 'akka-remote_2.11', version: '2.4.17'
+}
+
+
+/* INHERITANCE FROM DYNAMO PROJECT */
+
+
+
+
+/**
+ * Custom Gradle task to run the Client CLI.
+ * You can run the application in this way: ./gradlew node -Pmyargs="arg1 arg2 ..."
+ */
+task node(type: JavaExec) {
+    classpath sourceSets.main.runtimeClasspath
+    jvmArgs = ['-ea']
+    main = 'dynamo.Node'
+
+    // this way we can pass some parameters to the java app
+    if (project.hasProperty('myargs')) {
+        args(myargs.split(' '))
+    }
+}
+
+/**
+ * Custom Gradle task to run the Client CLI.
+ * You can run the application in this way: ./gradlew client -Pmyargs="arg1 arg2 ..."
+ */
+task client(type: JavaExec) {
+    classpath sourceSets.main.runtimeClasspath
+    jvmArgs = ['-ea']
+    main = 'dynamo.Client'
+
+    // this way we can pass some parameters to the java app
+    if (project.hasProperty('myargs')) {
+        args(myargs.split(' '))
+    }
+}
+
+/**
+ * Compile the code and create a fat JAR archive with all the dependencies
+ * needed to run the project. The entry point here is the dynamo.Node class.
+ */
+task nodejar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    archiveName = 'node.jar'
+    description = "DS1 project - Node"
+    manifest.attributes 'Main-Class': 'dynamo.Node'
+    from(project.convention.getPlugin(JavaPluginConvention).sourceSets.main.output)
+    configurations = [project.configurations.runtime]
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
+        resource = 'reference.conf'
+    }
+}
+
+/**
+ * Compile the code and create a fat JAR archive with all the dependencies
+ * needed to run the project. The entry point here is the dynamo.Client class.
+ */
+task clientjar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    archiveName = 'client.jar'
+    description = "DS1 project - Client"
+    manifest.attributes 'Main-Class': 'dynamo.Client'
+    from(project.convention.getPlugin(JavaPluginConvention).sourceSets.main.output)
+    configurations = [project.configurations.runtime]
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
+        resource = 'reference.conf'
+    }
+}
+
