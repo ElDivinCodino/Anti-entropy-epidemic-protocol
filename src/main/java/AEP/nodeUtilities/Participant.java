@@ -89,6 +89,11 @@ public class Participant extends UntypedActor{
         }
     }
 
+    /**
+     * This method implements a scheduler that triggers a message every certain time
+     * @param time quantity of time chosen
+     * @param unit time unit measurement chosen
+     */
     private void scheduleTimeout(Integer time, TimeUnit unit) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),

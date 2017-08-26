@@ -19,10 +19,18 @@ public class GossipMessage implements Serializable{
         this.participantStates = states;
     }
 
+    /**
+     *
+     * @return the TreeMap one wants to gossip to its peer
+     */
     public TreeMap<Integer, TreeMap<Integer, Couple>> getParticipantStates() {
         return participantStates;
     }
 
+    /**
+     *
+     * @return true if the sender of the message is the one who started the gossip process, false otherwise
+     */
     public boolean isSender() {
         return isSender;
     }

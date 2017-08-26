@@ -16,6 +16,10 @@ public class StartGossip implements Serializable{
         this.participantStates = participantStates;
     }
 
+    /**
+     *
+     * @return the TreeMap representing the digest that the starter of the gossip process wants to gossip to its peer
+     */
     public TreeMap<Integer, TreeMap<Integer, Couple>> getParticipantStates() {
         return participantStates;
     }

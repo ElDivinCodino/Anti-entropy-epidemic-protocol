@@ -21,6 +21,11 @@ public class Storage {
         initializeStates(participantsNumber, couplesNumber);
     }
 
+    /**
+     * This method provides the initialization of the data structure responsible for storing the items
+     * @param n number of participants
+     * @param p number of pairs for each participant
+     */
     private void initializeStates(int n, int p) {
 
         Random r = new Random();
@@ -39,29 +44,39 @@ public class Storage {
 
             participantStates.put(i, newTreemap);
         }
+        System.out.println(id + ": " + participantStates);
         // save the items to disk
         save();
     }
 
+    /**
+     * This method performs the digest of the storage of the participant
+     * @return a TreeMap containing the states of the participants with null values
+     */
     public TreeMap<Integer, TreeMap<Integer, Couple>> createDigest() {
+        TreeMap<Integer, TreeMap<Integer, Couple>> digest = new TreeMap<>();
 
-        TreeMap<Integer, TreeMap<Integer, Couple>> digest = (TreeMap<Integer, TreeMap<Integer, Couple>>) participantStates.clone();
-        for (Map.Entry<Integer, TreeMap<Integer, Couple>> participantStates : digest.entrySet()) {
-            for (Map.Entry<Integer, Couple> state : participantStates.getValue().entrySet()) {
-                state.getValue().setValue(null);
+        for (Map.Entry<Integer, TreeMap<Integer, Couple>> state : digest.entrySet()) {
+            for (Map.Entry<Integer, Couple> delta : state.getValue().entrySet()) {
+                delta.getValue().updateCouple(participantStates.get(state.getKey()).get(delta.getKey()));
+                delta.getValue().setValue(null);
             }
         }
-
         return digest;
     }
 
+    /**
+     * This method performs the reconciliation, or merging
+     * i.e. updates those keys obtained from the peer that are newer w.r.t the ones it already owned
+     * @param peerStates a TreeMap which has null value if the participant should not be interested in updating that key,
+     *                   or a new value with an higher version number instead
+     */
     public void reconciliation (TreeMap<Integer, TreeMap<Integer, Couple>> peerStates) {
 
         for (Map.Entry<Integer, TreeMap<Integer, Couple>> state : peerStates.entrySet()) {
             for (Map.Entry<Integer, Couple> delta : state.getValue().entrySet()) {
                 Couple couple = delta.getValue();
                 if (couple.getVersion() > participantStates.get(state.getKey()).get(delta.getKey()).getVersion()) {
-                    System.out.println("Replacing " + participantStates.get(state.getKey()).get(delta.getKey()) + " with "+ couple);
                     participantStates.get(state.getKey()).get(delta.getKey()).updateCouple(couple);
                 }
             }
@@ -70,40 +85,15 @@ public class Storage {
     }
 
     /**
-     * updates a pair in the NodeUtilities.Storage
-     *
-     * @param p the participant who is responsible for the Couple
-     * @param key the key of the Couple
-     * @param value the updated value of the Couple
+     * TODO: will be useful further on
+     * @return the next integer greater than the maximum
      */
-    public void update(String p, int key, String value, int version) {
-
-        int participantNumber = getParticipantNumber(p);
-        Couple couple = participantStates.get(participantNumber).get(key);
-
-        couple.setValue(value);
-        couple.setVersion(version);
-
-        // save the items to disk
-        save();
-    }
-
     private int findNextVersion() {
         return 0;
     }
 
     /**
-     *
-     * @param p the entire name of the participant
-     * @return the int which corresponds to the participant
-     */
-    private int getParticipantNumber(String p) {
-        String stringNumber = p.substring(12); // delete the "Participant_" part
-        return Integer.parseInt(stringNumber);
-    }
-
-    /**
-     * saves the storage on a local text file
+     * this method saves the storage on a local text file
      */
     private void save() {
         try {
@@ -116,7 +106,8 @@ public class Storage {
     }
 
     /**
-     *  overrides the java.lang.Object.toString() method, useful to manage the representation of the entire NodeUtilities.Storage
+     *  This method overrides the java.lang.Object.toString() method, useful to manage the representation of the entire NodeUtilities.Storage
+     *  @return a String which is a representation of the Storage current status
      */
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -132,10 +123,16 @@ public class Storage {
         return sb.toString();
     }
 
+    /**
+     * This method provides the computation of the differences between the received digest and the current states.
+     * If the received digest has Couples with higher version, it means that the peer knows a needed update; otherwise inform
+     * the peer to not be interested in that information by setting its value to null
+     * @param digest the digest coming from the other peer
+     * @return a TreeMap indicating the values which needs to be updated
+     */
     public TreeMap<Integer, TreeMap<Integer, Couple>> computeDifferences(TreeMap<Integer, TreeMap<Integer, Couple>> digest) {
 
         TreeMap<Integer, TreeMap<Integer, Couple>> toBeUpdated = (TreeMap<Integer, TreeMap<Integer, Couple>>) participantStates.clone();
-
         for (Map.Entry<Integer, TreeMap<Integer, Couple>> state : digest.entrySet()) {
             for (Map.Entry<Integer, Couple> delta : state.getValue().entrySet()) {
                 Couple couple = delta.getValue();
@@ -145,7 +142,6 @@ public class Storage {
                 }
             }
         }
-
         return toBeUpdated;
     }
 }
