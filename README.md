@@ -53,3 +53,12 @@ Possible types of orderings:
 
 - scuttle-breath: Prima si esegue un ordinamento locale per ogni processo, poi si prende in ordine il primo elemento da ogni processo, poi il secondo elemento da ogni processo e cosi via. L'ordine con cui si prendono questi elementi (quindi l'ordine dei processi) è casuale e cambia ad ogni messaggio (per evitare bias).
 - scuttle-depth: L'ordinamento va in base al numero di delta che un processo può inviare. Quindi il processo che ha più delta invia per primo. Nel caso ci sia lo stesso numero di delta per diversi processi si sceglie a random.
+
+
+## Resources
+
+https://distributedalgorithm.wordpress.com/2014/05/15/scuttlebutt-gossip-protocol/
+
+https://github.com/dominictarr/scuttlebutt
+
+https://awinterman.github.io/simple-scuttle/
