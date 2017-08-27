@@ -107,24 +107,6 @@ public class Storage {
     }
 
     /**
-     *  This method overrides the java.lang.Object.toString() method, useful to manage the representation of the entire NodeUtilities.Storage
-     *  @return a String which is a representation of the Storage current status
-     */
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(/*CustomLogger.ANSI_WHITE + */"Storage: \n"/* + CustomLogger.ANSI_RESET*/);
-        sb.append("\tParticipant name|");
-        for(int j = 0; j < couplesNumber; j++) {
-            sb.append("\tKey " + j + "\t|");
-        }
-        sb.append("\n");
-        sb.append(participantStates.toString());
-
-        return sb.toString();
-    }
-
-    /**
      * This method provides the computation of the differences between the received digest and the current states.
      * If the received digest has Couples with higher version, it means that the peer knows a needed update; otherwise inform
      * the peer to not be interested in that information by setting its value to null
@@ -145,5 +127,28 @@ public class Storage {
             }
         }
         return toBeUpdated;
+    }
+
+    /**
+     *  This method overrides the java.lang.Object.toString() method, useful to manage the representation of the entire NodeUtilities.Storage
+     *  @return a String which is a representation of the Storage current status
+     */
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("Storage for p=").append(this.id).append(": \n");
+        sb.append("\tP|");
+        for(int j = 0; j < couplesNumber; j++) {
+            sb.append("\tKey ").append(j).append("\t|");
+        }
+//        sb.append(participantStates.toString());
+        for (Map.Entry<Integer, TreeMap<Integer, Couple>> state : participantStates.entrySet()) {
+            sb.append("\n\t").append(state.getKey()).append("\t");
+            for (Map.Entry<Integer, Couple> delta : state.getValue().entrySet()) {
+                sb.append(delta.getValue()).append("\t");
+            }
+        }
+        sb.append("\n");
+        return sb.toString();
     }
 }
