@@ -18,7 +18,7 @@ import java.util.List;
  */
 public class MainClass {
 
-    private int n = 2; // number of nodes/participants belonging to the network
+    private int n = 4; // number of nodes/participants belonging to the network
     private int p = 5; // number of (key,value) pairs for each participant
 
     private List<ActorRef> ps = new ArrayList<ActorRef>();

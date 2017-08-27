@@ -58,11 +58,12 @@ public class Participant extends UntypedActor{
                 break;
 
             case "TimeoutMessage":
-                ActorRef q;
-
+                int rndId;
+                // choose a random peer excluding self
                 do {
-                    q = ps.get(Utilities.getRandomNum(0, ps.size() - 1));
-                } while (q == self());
+                    rndId = Utilities.getRandomNum(0, ps.size() - 1);
+                } while (rndId == this.id);
+                ActorRef q = ps.get(rndId);
 
                 q.tell(new StartGossip(storage.createDigest()), self());
                 logger.debug("Timeout: sending StartGossip to " + q);

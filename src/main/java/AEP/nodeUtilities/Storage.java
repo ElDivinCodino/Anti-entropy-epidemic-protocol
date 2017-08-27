@@ -1,5 +1,7 @@
 package AEP.nodeUtilities;
 
+import com.rits.cloning.Cloner;
+
 import java.io.*;
 import java.util.*;
 
@@ -54,11 +56,10 @@ public class Storage {
      * @return a TreeMap containing the states of the participants with null values
      */
     public TreeMap<Integer, TreeMap<Integer, Couple>> createDigest() {
-        TreeMap<Integer, TreeMap<Integer, Couple>> digest = new TreeMap<>();
-
-        for (Map.Entry<Integer, TreeMap<Integer, Couple>> state : digest.entrySet()) {
-            for (Map.Entry<Integer, Couple> delta : state.getValue().entrySet()) {
-                delta.getValue().updateCouple(participantStates.get(state.getKey()).get(delta.getKey()));
+        Cloner cloner = new Cloner();
+        TreeMap<Integer, TreeMap<Integer, Couple>> digest = cloner.deepClone(participantStates);
+        for (Map.Entry<Integer, TreeMap<Integer, Couple>> pStates : digest.entrySet()) {
+            for (Map.Entry<Integer, Couple> delta : pStates.getValue().entrySet()) {
                 delta.getValue().setValue(null);
             }
         }
@@ -132,7 +133,8 @@ public class Storage {
      */
     public TreeMap<Integer, TreeMap<Integer, Couple>> computeDifferences(TreeMap<Integer, TreeMap<Integer, Couple>> digest) {
 
-        TreeMap<Integer, TreeMap<Integer, Couple>> toBeUpdated = (TreeMap<Integer, TreeMap<Integer, Couple>>) participantStates.clone();
+        Cloner cloner = new Cloner();
+        TreeMap<Integer, TreeMap<Integer, Couple>> toBeUpdated= cloner.deepClone(participantStates);
         for (Map.Entry<Integer, TreeMap<Integer, Couple>> state : digest.entrySet()) {
             for (Map.Entry<Integer, Couple> delta : state.getValue().entrySet()) {
                 Couple couple = delta.getValue();
