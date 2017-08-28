@@ -8,12 +8,12 @@ import java.util.List;
 /**
  * Created by Francesco on 24/08/17.
  */
-public class SetupNetMessage implements Serializable {
+public class SetupMessage implements Serializable {
 
     private int couplesNumber;
     private List<ActorRef> ps;
 
-    public SetupNetMessage(int couplesNumber, List participants) {
+    public SetupMessage(int couplesNumber, List participants) {
         this.couplesNumber = couplesNumber;
         ps = participants;
     }

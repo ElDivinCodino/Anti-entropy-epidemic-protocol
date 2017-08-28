@@ -1,7 +1,6 @@
 package AEP;
 
-import AEP.messages.SetupNetMessage;
-import AEP.nodeUtilities.Participant;
+import AEP.messages.SetupMessage;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
@@ -57,7 +56,7 @@ public class MainClass {
         }
 
         for (ActorRef participant : ps) {
-            participant.tell(new SetupNetMessage(p, ps), null);
+            participant.tell(new SetupMessage(p, ps), null);
         }
     }
 }

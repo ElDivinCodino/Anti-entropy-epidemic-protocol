@@ -1,9 +1,12 @@
 package AEP.nodeUtilities;
 
+import AEP.PreciseParticipant;
 import com.rits.cloning.Cloner;
 
 import java.io.*;
 import java.util.*;
+
+import static AEP.PreciseParticipant.Ordering;
 
 /**
  * The storage where all the states of a participant are stored
@@ -38,7 +41,7 @@ public class Storage {
 
             for(int j = 0; j < p; j++) {
                 if (i == id) {
-                    newTreemap.put(j, new Couple(Utilities.getRandomNum(0, 1000).toString(), 1));
+                    newTreemap.put(j, new Couple(Utilities.getRandomNum(0, 1000).toString(), System.currentTimeMillis()));
                 } else {
                     newTreemap.put(j, new Couple(null, 0));
                 }
@@ -122,11 +125,20 @@ public class Storage {
                 Couple couple = delta.getValue();
                 // OPTIMIZATION: greater or equal instead of only greater because otherwise we send also couples with the same version number
                 if (couple.getVersion() >= participantStates.get(state.getKey()).get(delta.getKey()).getVersion()) {
-                    toBeUpdated.get(state.getKey()).get(delta.getKey()).updateCouple(new Couple(null, 0));
+                    toBeUpdated.get(state.getKey()).remove(delta.getKey());  //.updateCouple(new Couple(null, 0));
                 }
             }
         }
         return toBeUpdated;
+    }
+
+    public TreeMap<Integer, TreeMap<Integer, Couple>> mtuResizeAndSort(TreeMap<Integer, TreeMap<Integer, Couple>> state, Ordering method){
+        if (method == Ordering.OLDEST) { // ascending order (first is smallest timestamp)
+
+        }else { // descending order (first is newest timestamp)
+
+        }
+        return null;
     }
 
     /**
