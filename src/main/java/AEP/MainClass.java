@@ -18,7 +18,7 @@ import java.util.List;
 public class MainClass {
 
     private int n = 4; // number of nodes/participants belonging to the network
-    private int p = 20; // number of (key,value) pairs for each participant
+    private int p = 10; // number of (key,value) pairs for each participant
 
     private List<ActorRef> ps = new ArrayList<ActorRef>();
 
@@ -51,7 +51,7 @@ public class MainClass {
         // Set up all the participants
         for (int i = 0; i < n; i++) {
             participantName = "Participant_" + i;
-            ActorRef node = system.actorOf(Props.create(Participant.class, destinationPath + "/" + participantName, i), participantName);
+            ActorRef node = system.actorOf(Props.create(PreciseParticipant.class, destinationPath + "/" + participantName, i), participantName);
             ps.add(node);
         }
 

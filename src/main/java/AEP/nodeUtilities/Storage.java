@@ -132,6 +132,9 @@ public class Storage {
 
     public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Ordering method) {
 
+        if (state.size() <= mtuSize){
+            return state;
+        }
         ArrayList<Delta> mtuArrayList = new ArrayList<>();
 
         Collections.sort(state, new Comparator<Delta>() {
@@ -142,9 +145,9 @@ public class Storage {
         });
 
         if (method == Ordering.OLDEST) { // ascending order (first is smallest timestamp)
-            mtuArrayList.addAll(state.subList(0, mtuSize - 1));
+            mtuArrayList.addAll(state.subList(0, mtuSize));
         } else { // descending order (first is newest timestamp)
-            mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size() - 1));
+            mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size()));
             Collections.reverse(mtuArrayList);
         }
         return mtuArrayList;
