@@ -42,7 +42,7 @@ public class Participant extends UntypedActor{
         logger.debug("Setup completed for node " + id);
 
         scheduleTimeout(1, TimeUnit.SECONDS);
-        scheduleTimeout(updateRate, TimeUnit.MILLISECONDS);
+        scheduleUpdateTimeout(updateRate, TimeUnit.MILLISECONDS);
     }
 
     protected void timeoutMessage(TimeoutMessage message){
@@ -93,7 +93,7 @@ public class Participant extends UntypedActor{
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);
         storage.update(keyToBeUpdated, newValue);
 
-        scheduleTimeout(updateRate, TimeUnit.MILLISECONDS);
+        scheduleUpdateTimeout(updateRate, TimeUnit.MILLISECONDS);
     }
 
     protected void test(Object message){

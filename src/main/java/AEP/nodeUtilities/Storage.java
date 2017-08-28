@@ -13,14 +13,14 @@ public class Storage {
     private ArrayList<Delta> participantStates = new ArrayList<>();
 
     private String pathname;
-    private int participantsNumber, couplesNumber, id;
+    private int tuplesNumber;
+    private int id;
 
-    public Storage(String pathname, int participantsNumber, int couplesNumber, int id) {
+    public Storage(String pathname, int participantsNumber, int tuplesNumber, int id) {
         this.pathname = pathname;
-        this.participantsNumber = participantsNumber;
-        this.couplesNumber = couplesNumber;
+        this.tuplesNumber = tuplesNumber;
         this.id = id;
-        initializeStates(participantsNumber, couplesNumber);
+        initializeStates(participantsNumber, tuplesNumber);
     }
 
     /**
@@ -50,7 +50,7 @@ public class Storage {
 
 
     public void update(int key, String value) {
-        Delta deltaToBeUpdated = participantStates.get(key);
+        Delta deltaToBeUpdated = participantStates.get((id * tuplesNumber) + key);
         deltaToBeUpdated.setV(value);
         deltaToBeUpdated.setN(System.currentTimeMillis());
     }
@@ -167,7 +167,7 @@ public class Storage {
 
         sb.append("Storage for p=").append(this.id).append(": \n");
         sb.append("\tP|");
-        for(int j = 0; j < couplesNumber; j++) {
+        for(int j = 0; j < tuplesNumber; j++) {
             sb.append("\tKey ").append(j).append("\t|");
         }
         long currentP = -1;
