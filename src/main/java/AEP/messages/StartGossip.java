@@ -1,8 +1,10 @@
 package AEP.messages;
 
+import AEP.Delta;
 import AEP.nodeUtilities.Couple;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.TreeMap;
 
 /**
@@ -10,9 +12,9 @@ import java.util.TreeMap;
  */
 public class StartGossip implements Serializable{
 
-    private TreeMap<Integer, TreeMap<Integer, Couple>> participantStates;
+    private ArrayList<Delta> participantStates;
 
-    public StartGossip(TreeMap<Integer, TreeMap<Integer, Couple>> participantStates) {
+    public StartGossip(ArrayList<Delta> participantStates) {
         this.participantStates = participantStates;
     }
 
@@ -20,7 +22,7 @@ public class StartGossip implements Serializable{
      *
      * @return the TreeMap representing the digest that the starter of the gossip process wants to gossip to its peer
      */
-    public TreeMap<Integer, TreeMap<Integer, Couple>> getParticipantStates() {
+    public ArrayList<Delta> getParticipantStates() {
         return participantStates;
     }
 }

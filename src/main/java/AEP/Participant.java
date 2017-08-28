@@ -14,6 +14,7 @@ import scala.concurrent.duration.Duration;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -68,7 +69,7 @@ public class Participant extends UntypedActor{
      */
     protected void startGossip(StartGossip message){
         logger.debug("First phase: Digest from " + getSender());
-        TreeMap<Integer, TreeMap<Integer, Couple>> digest = ((StartGossip) message).getParticipantStates();
+        ArrayList<Delta> digest = ((StartGossip) message).getParticipantStates();
         // sender set to null because we do not need to answer to this message
         getSender().tell(new GossipMessage(false, storage.computeDifferences(digest)), null);
         // send to p the second message containing the digest (NOTE: in the paper it should be just the outdated entries that q requests to p)

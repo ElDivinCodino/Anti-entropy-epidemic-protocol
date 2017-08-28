@@ -4,6 +4,7 @@ import AEP.messages.GossipMessage;
 import AEP.messages.StartGossip;
 import AEP.nodeUtilities.Couple;
 
+import java.util.ArrayList;
 import java.util.TreeMap;
 
 /**
@@ -24,9 +25,9 @@ public class PreciseParticipant extends Participant {
 
     protected void startGossip(StartGossip message){
         logger.debug("First phase: Digest from " + getSender());
-        TreeMap<Integer, TreeMap<Integer, Couple>> digest = ((StartGossip) message).getParticipantStates();
+        ArrayList<Delta> digest = ((StartGossip) message).getParticipantStates();
         // sender set to null because we do not need to answer to this message
-        TreeMap<Integer, TreeMap<Integer, Couple>> toBeUpdated = storage.computeDifferences(message.getParticipantStates())
+        ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
         getSender().tell(new GossipMessage(false, storage.mtuResizeAndSort(toBeUpdated, this.method)), null);
         // send to p the second message containing the digest (NOTE: in the paper it should be just the outdated entries that q requests to p)
         getSender().tell(new GossipMessage(false, storage.createDigest()), self());
@@ -43,7 +44,7 @@ public class PreciseParticipant extends Participant {
                 storage.reconciliation(message.getParticipantStates());
             }else{ // digest message to respond to
                 // send to q last message of exchange with deltas.
-                TreeMap<Integer, TreeMap<Integer, Couple>> toBeUpdated = storage.computeDifferences(message.getParticipantStates())
+                ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
                 getSender().tell(new GossipMessage(true, storage.mtuResizeAndSort(toBeUpdated, this.method)), self());
             }
             logger.debug("Third phase: sending differences to " + getSender());

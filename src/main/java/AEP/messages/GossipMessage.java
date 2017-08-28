@@ -1,8 +1,10 @@
 package AEP.messages;
 
+import AEP.Delta;
 import AEP.nodeUtilities.Couple;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.TreeMap;
 
 /**
@@ -12,9 +14,9 @@ public class GossipMessage implements Serializable{
 
 
     private boolean isSender;
-    private TreeMap<Integer, TreeMap<Integer, Couple>> participantStates;
+    private ArrayList<Delta> participantStates;
 
-    public GossipMessage(boolean isSender, TreeMap<Integer, TreeMap<Integer, Couple>> states) {
+    public GossipMessage(boolean isSender, ArrayList<Delta> states) {
         this.isSender = isSender;
         this.participantStates = states;
     }
@@ -23,7 +25,7 @@ public class GossipMessage implements Serializable{
      *
      * @return the TreeMap one wants to gossip to its peer
      */
-    public TreeMap<Integer, TreeMap<Integer, Couple>> getParticipantStates() {
+    public ArrayList<Delta> getParticipantStates() {
         return participantStates;
     }
 

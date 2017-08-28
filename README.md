@@ -18,7 +18,7 @@ Each process has a *local* view of each other.
 Each participant state is replicated to all other participants > ??
 $\mu_p(q)$ indica che il processo p conosce lo stato di q.
 
-Reconciliation: take the value with the highest version number.
+Reconciliation: take the v with the highest n number.
 
 Each participant has a set of *Peers* that is gossips with. Periodically a process gossips with its peers choosing one at random.
 
@@ -40,14 +40,14 @@ Send exactly those mappings that are more recent than those of the peer.
 
 #### Scuttlebutt reconciliation
 
-Ogni qual volta un processo vuole aggiornare un elemento locale, deve utilizzare un numero di version più alto del massimo attuale.
+Ogni qual volta un processo vuole aggiornare un elemento locale, deve utilizzare un numero di n più alto del massimo attuale.
 
 Prima di tutto p e q si scambiano i loro massimi dei processi di cui hanno delle tuple.
 
 Poi p invia a q tutte le tuple che hanno un numero di versione maggiore rispetto al massimo che vede q per quel processo.
 E viceversa per q.
 
-se c'è una mtu (quindi un numero massimo di delta da mandare) vengono mandati prima i delta che hanno un version number minore. (Con un ordinamento singolo per ciascun processo)
+se c'è una mtu (quindi un numero massimo di delta da mandare) vengono mandati prima i delta che hanno un n number minore. (Con un ordinamento singolo per ciascun processo)
 
 Possible types of orderings:
 
