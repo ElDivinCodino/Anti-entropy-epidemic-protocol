@@ -1,7 +1,5 @@
 package AEP.nodeUtilities;
 
-import AEP.Delta;
-
 import java.io.*;
 import java.util.*;
 
@@ -48,6 +46,13 @@ public class Storage {
         }
         // save the items to disk
         save();
+    }
+
+
+    public void update(int key, String value) {
+        Delta deltaToBeUpdated = participantStates.get(key);
+        deltaToBeUpdated.setV(value);
+        deltaToBeUpdated.setN(System.currentTimeMillis());
     }
 
     /**

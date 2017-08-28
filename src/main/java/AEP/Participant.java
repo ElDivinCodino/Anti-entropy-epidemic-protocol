@@ -1,22 +1,13 @@
 package AEP;
 
-import AEP.messages.GossipMessage;
-import AEP.messages.SetupMessage;
-import AEP.messages.StartGossip;
-import AEP.messages.TimeoutMessage;
-import AEP.nodeUtilities.Couple;
-import AEP.nodeUtilities.CustomLogger;
-import AEP.nodeUtilities.Storage;
-import AEP.nodeUtilities.Utilities;
+import AEP.messages.*;
+import AEP.nodeUtilities.*;
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import scala.concurrent.duration.Duration;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -31,7 +22,10 @@ public class Participant extends UntypedActor{
     protected Storage storage = null;
     protected String storagePath;
     protected List<ActorRef> ps;
+    protected int tuplesNumber;
     protected int id;
+
+    private int updateRate = 10;
 
     public Participant(String destinationPath, int id) {
         this.storagePath = destinationPath;
@@ -40,14 +34,15 @@ public class Participant extends UntypedActor{
     }
 
     protected void setupMessage(SetupMessage message){
-        int couplesNumber = message.getCouplesNumber();
+        tuplesNumber = message.getCouplesNumber();
         ps = message.getParticipants();
 
-        storage = new Storage(storagePath, ps.size(), couplesNumber, id);
+        storage = new Storage(storagePath, ps.size(), tuplesNumber, id);
 
         logger.debug("Setup completed for node " + id);
 
         scheduleTimeout(1, TimeUnit.SECONDS);
+        scheduleTimeout(updateRate, TimeUnit.MILLISECONDS);
     }
 
     protected void timeoutMessage(TimeoutMessage message){
@@ -93,6 +88,14 @@ public class Participant extends UntypedActor{
         }
     }
 
+    protected void update() {
+        String newValue = Utilities.getRandomNum(0, 1000).toString();
+        int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);
+        storage.update(keyToBeUpdated, newValue);
+
+        scheduleTimeout(updateRate, TimeUnit.MILLISECONDS);
+    }
+
     protected void test(Object message){
         logger.error("Method not implemented in class " + this.getClass().getName());
     }
@@ -115,6 +118,9 @@ public class Participant extends UntypedActor{
             case "GossipMessage":
                 gossipMessage((GossipMessage) message);
                 break;
+            case "UpdateTimeout":
+                update();
+                break;
         }
     }
 
@@ -128,6 +134,19 @@ public class Participant extends UntypedActor{
                 Duration.create(time, unit),
                 getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
         logger.debug("scheduleTimeout: scheduled timeout in {} {}",
+                time, unit.toString());
+    }
+
+    /**
+     * This method implements a scheduler that triggers an update every certain time
+     * @param time quantity of time chosen
+     * @param unit time unit measurement chosen
+     */
+    private void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(time, unit),
+                getSelf(), new UpdateTimeout(), getContext().system().dispatcher(), getSelf());
+        logger.debug("scheduleUpdateTimeout: scheduled timeout for an update in {} {}",
                 time, unit.toString());
     }
 }

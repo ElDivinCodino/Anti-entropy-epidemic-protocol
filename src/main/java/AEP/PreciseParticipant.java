@@ -2,10 +2,9 @@ package AEP;
 
 import AEP.messages.GossipMessage;
 import AEP.messages.StartGossip;
-import AEP.nodeUtilities.Couple;
+import AEP.nodeUtilities.Delta;
 
 import java.util.ArrayList;
-import java.util.TreeMap;
 
 /**
  * Created by StefanoFiora on 28/08/2017.
@@ -25,7 +24,6 @@ public class PreciseParticipant extends Participant {
 
     protected void startGossip(StartGossip message){
         logger.debug("First phase: Digest from " + getSender());
-        ArrayList<Delta> digest = ((StartGossip) message).getParticipantStates();
         // sender set to null because we do not need to answer to this message
         ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
         getSender().tell(new GossipMessage(false, storage.mtuResizeAndSort(toBeUpdated, mtu ,this.method)), null);

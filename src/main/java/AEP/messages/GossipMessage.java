@@ -1,11 +1,9 @@
 package AEP.messages;
 
-import AEP.Delta;
-import AEP.nodeUtilities.Couple;
+import AEP.nodeUtilities.Delta;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.TreeMap;
 
 /**
  * Created by Francesco on 25/08/17.
