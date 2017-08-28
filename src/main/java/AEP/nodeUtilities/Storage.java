@@ -48,7 +48,6 @@ public class Storage {
                 participantStates.add(tmp);
             }
         }
-        System.out.println(id + ": " + participantStates);
         // save the items to disk
         save();
     }
@@ -73,7 +72,6 @@ public class Storage {
      */
     public void reconciliation (ArrayList<Delta> peerStates) {
 
-        System.out.println("peerStates:" + peerStates);
         int index = 0;
         for (Delta d : peerStates){
             for (; index < this.participantStates.size(); index++) {
@@ -88,7 +86,6 @@ public class Storage {
                 }
             }
         }
-        System.out.println(participantStates);
         save();
     }
 
@@ -139,13 +136,24 @@ public class Storage {
         return toBeUpdated;
     }
 
-    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, Ordering method){
+    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Ordering method){
+
+        ArrayList<Delta> mtuArrayList = new ArrayList<>();
+
+        Collections.sort(state, new Comparator<Delta>() {
+            @Override
+            public int compare(Delta o1, Delta o2) {
+                return o1.getV().compareTo(o2.getV());
+            }
+        });
+
         if (method == Ordering.OLDEST) { // ascending order (first is smallest timestamp)
-
+            mtuArrayList.addAll(state.subList(0, mtuSize - 1));
         }else { // descending order (first is newest timestamp)
-
+            mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size() - 1));
+            Collections.reverse(mtuArrayList);
         }
-        return null;
+        return mtuArrayList;
     }
 
     /**
