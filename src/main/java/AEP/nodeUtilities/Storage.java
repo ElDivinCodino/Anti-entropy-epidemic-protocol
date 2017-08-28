@@ -1,8 +1,6 @@
 package AEP.nodeUtilities;
 
 import AEP.Delta;
-import AEP.PreciseParticipant;
-import com.rits.cloning.Cloner;
 
 import java.io.*;
 import java.util.*;
@@ -72,9 +70,8 @@ public class Storage {
      */
     public void reconciliation (ArrayList<Delta> peerStates) {
 
-        int index = 0;
         for (Delta d : peerStates){
-            for (; index < this.participantStates.size(); index++) {
+            for (int index = 0; index < this.participantStates.size(); index++) {
                 if (d.getP() == participantStates.get(index).getP() &&
                         d.getK() == participantStates.get(index).getK() &&
                         d.getN() >= participantStates.get(index).getN()) {
@@ -88,7 +85,6 @@ public class Storage {
         }
         save();
     }
-
 
     /**
      * this method saves the storage on a local text file
@@ -113,9 +109,8 @@ public class Storage {
     public ArrayList<Delta> computeDifferences(ArrayList<Delta> digest) {
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
 
-        int index = 0;
         for (Delta d : digest){
-            for (; index < this.participantStates.size(); index++) {
+            for (int index = 0; index < this.participantStates.size(); index++) {
                 if (d.getP() == participantStates.get(index).getP() &&
                         d.getK() == participantStates.get(index).getK() &&
                         // OPTIMIZATION: greater or equal instead of only greater
@@ -132,11 +127,10 @@ public class Storage {
                 }
             }
         }
-
         return toBeUpdated;
     }
 
-    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Ordering method){
+    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Ordering method) {
 
         ArrayList<Delta> mtuArrayList = new ArrayList<>();
 
@@ -149,7 +143,7 @@ public class Storage {
 
         if (method == Ordering.OLDEST) { // ascending order (first is smallest timestamp)
             mtuArrayList.addAll(state.subList(0, mtuSize - 1));
-        }else { // descending order (first is newest timestamp)
+        } else { // descending order (first is newest timestamp)
             mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size() - 1));
             Collections.reverse(mtuArrayList);
         }
