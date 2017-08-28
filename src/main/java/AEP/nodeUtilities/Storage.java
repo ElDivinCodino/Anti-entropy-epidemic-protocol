@@ -73,10 +73,9 @@ public class Storage {
      */
     public void reconciliation (ArrayList<Delta> peerStates) {
 
-        System.out.println("peerStates:" + peerStates);
-        int index = 0;
+//        int index = 0;
         for (Delta d : peerStates){
-            for (; index < this.participantStates.size(); index++) {
+            for (int index = 0; index < this.participantStates.size(); index++) {
                 if (d.getP() == participantStates.get(index).getP() &&
                         d.getK() == participantStates.get(index).getK() &&
                         d.getN() >= participantStates.get(index).getN()) {
@@ -116,9 +115,9 @@ public class Storage {
     public ArrayList<Delta> computeDifferences(ArrayList<Delta> digest) {
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
 
-        int index = 0;
+//        int index = 0;
         for (Delta d : digest){
-            for (; index < this.participantStates.size(); index++) {
+            for (int index = 0; index < this.participantStates.size(); index++) {
                 if (d.getP() == participantStates.get(index).getP() &&
                         d.getK() == participantStates.get(index).getK() &&
                         // OPTIMIZATION: greater or equal instead of only greater
@@ -135,11 +134,11 @@ public class Storage {
                 }
             }
         }
-
         return toBeUpdated;
     }
 
     public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, Ordering method){
+
         if (method == Ordering.OLDEST) { // ascending order (first is smallest timestamp)
 
         }else { // descending order (first is newest timestamp)
