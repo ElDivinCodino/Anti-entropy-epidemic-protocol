@@ -25,7 +25,7 @@ public class Participant extends UntypedActor{
     protected int tuplesNumber;
     protected int id;
 
-    private int updateRate = 10;
+    protected int updateRate = 1000;
 
     public Participant(String destinationPath, int id) {
         this.storagePath = destinationPath;
@@ -129,7 +129,7 @@ public class Participant extends UntypedActor{
      * @param time quantity of time chosen
      * @param unit time unit measurement chosen
      */
-    private void scheduleTimeout(Integer time, TimeUnit unit) {
+    protected void scheduleTimeout(Integer time, TimeUnit unit) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
@@ -142,7 +142,7 @@ public class Participant extends UntypedActor{
      * @param time quantity of time chosen
      * @param unit time unit measurement chosen
      */
-    private void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
+    protected void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new UpdateTimeout(), getContext().system().dispatcher(), getSelf());
