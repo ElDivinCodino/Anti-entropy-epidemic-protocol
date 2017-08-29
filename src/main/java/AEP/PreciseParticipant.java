@@ -5,6 +5,7 @@ import AEP.messages.StartGossip;
 import AEP.nodeUtilities.Delta;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
 /**
  * Created by StefanoFiora on 28/08/2017.
@@ -38,7 +39,7 @@ public class PreciseParticipant extends Participant {
 
             // answer with the updates p has to do. Sender set to null because we do not need to answer to this message
             ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
-            getSender().tell(new GossipMessage(false, storage.mtuResizeAndSort(toBeUpdated, mtu ,this.method)), null);
+            getSender().tell(new GossipMessage(false, storage.mtuResizeAndSort(toBeUpdated, mtu, new PreciseComparator(), this.method)), null);
 
             logger.info("Fourth phase: sending differences to " + getSender());
         } else {
@@ -49,9 +50,16 @@ public class PreciseParticipant extends Participant {
             } else { // digest message to respond to
                 // send to q last message of exchange with deltas.
                 ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
-                getSender().tell(new GossipMessage(true, storage.mtuResizeAndSort(toBeUpdated, mtu, this.method)), self());
+                getSender().tell(new GossipMessage(true, storage.mtuResizeAndSort(toBeUpdated, mtu, new PreciseComparator(), this.method)), self());
                 logger.info("Third phase: sending differences to " + getSender());
             }
+        }
+    }
+
+    private class PreciseComparator implements Comparator<Delta> {
+        @Override
+        public int compare(Delta o1, Delta o2) {
+            return ((Long)o1.getN()).compareTo(o2.getN());
         }
     }
 }

@@ -25,7 +25,7 @@ public class Participant extends UntypedActor{
     protected int tuplesNumber;
     protected int id;
 
-    protected int updateRate = 1000;
+    protected int updateRate = 1000000;
 
     public Participant(String destinationPath, int id) {
         this.logger = new CustomLogger("P" + id);
@@ -38,7 +38,7 @@ public class Participant extends UntypedActor{
         tuplesNumber = message.getCouplesNumber();
         ps = message.getParticipants();
 
-        storage = new Storage(storagePath, ps.size(), tuplesNumber, id);
+        storage = new Storage(storagePath, ps.size(), tuplesNumber, id, logger);
 
         logger.info("Setup completed for node " + id);
 
