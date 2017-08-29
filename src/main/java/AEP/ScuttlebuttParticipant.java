@@ -27,6 +27,7 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
 
     protected void initValues(SetupMessage message){
         super.initValues(message);
+        method = Ordering.SCUTTLEDEPTH;
     }
 
     protected void timeoutMessage(TimeoutMessage message){
@@ -82,15 +83,18 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
         }
     }
 
+    /**
+     * Comparator for Scuttlebutt: first order from the older to the newer, than in case of same version, order by participant
+     */
     private class ScuttlebuttComparator implements Comparator<Delta> {
         int c;
 
         @Override
         public int compare(Delta o1, Delta o2) {
-            c = (((Long)o1.getP()).compareTo(o2.getP()));
+            c =((Long)o1.getN()).compareTo(o2.getN());
 
             if(c == 0)
-                c =((Long)o1.getN()).compareTo(o2.getN());
+                c = (((Long)o1.getP()).compareTo(o2.getP()));
 
             return c;
         }

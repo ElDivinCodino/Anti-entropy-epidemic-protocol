@@ -17,7 +17,7 @@ public class PreciseParticipant extends Participant {
     // Maximum Transfer Unit: maximum number of deltas inside a single gossip message
     protected int mtu;
 
-    public static enum Ordering { OLDEST, NEWEST};
+    public enum Ordering { OLDEST, NEWEST, SCUTTLEBREADTH, SCUTTLEDEPTH};
     protected Ordering method;
 
     public PreciseParticipant(int id) {

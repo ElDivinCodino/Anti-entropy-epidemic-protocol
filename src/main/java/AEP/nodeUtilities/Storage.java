@@ -202,9 +202,77 @@ public class Storage {
 
         if (method == Ordering.OLDEST) { // ascending order (first is smallest timestamp)
             mtuArrayList.addAll(state.subList(0, mtuSize));
-        } else { // descending order (first is newest timestamp)
+        } else if (method == Ordering.NEWEST) { // descending order (first is newest timestamp)
             mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size()));
             Collections.reverse(mtuArrayList);
+        } else if (method == Ordering.SCUTTLEBREADTH) {
+            if (mtuSize > 2) {
+                Delta current = state.get(0);
+                Delta next = state.get(1);
+                int randomOrder = Utilities.getRandomNum(0, 1);
+                int k; // int useful to know if we have just added current or next to mtuArrayList
+
+                for (int i = 2; i < mtuSize; i++) {
+                    if (current.getN() == next.getN()) {
+                        if (randomOrder == 0) {
+                            mtuArrayList.add(current);
+                            k = 1;
+                        } else {
+                            mtuArrayList.add(next);
+                            k = 0;
+                        }
+                    } else {
+                        mtuArrayList.add(current);
+                        k = 0;
+                    }
+
+                    if (k == 0) {
+                        next = state.get(i);
+                    } else {
+                        current = next;
+                        next = state.get(i);
+                    }
+                }
+            } else if (mtuSize == 2){
+                mtuArrayList.add(state.get(0));
+                mtuArrayList.add(state.get(1));
+            } else {
+                mtuArrayList.add(state.get(0));
+            }
+        } else if (method == Ordering.SCUTTLEDEPTH) {
+            TreeMap<Long, ArrayList<Delta>> numberOfDeltas = new TreeMap<>(); // represents how many deltas are available for each process. Key is the process id, value is the number of deltas
+            int randomOrder = Utilities.getRandomNum(0, 1);
+
+            for (Delta d: state) {
+                long p = d.getP();
+
+                if (numberOfDeltas.entrySet().contains(p)) {
+                    numberOfDeltas.get(p).add(d);
+                } else {
+                    ArrayList<Delta> newArray = new ArrayList<>();
+                    newArray.add(d);
+                    numberOfDeltas.put(p, newArray);
+                }
+            }
+
+            // while loop to decide which delta's to insert
+            while (mtuArrayList.size() < mtuSize && numberOfDeltas.size() > 0) {
+                int maxv = -1; // number of deltas of maximum process
+                long maxp = 0;  // key of the maximum process
+
+                for(Long i : numberOfDeltas.keySet()) {
+                    if (numberOfDeltas.get(i).size() > maxv || (numberOfDeltas.get(i).size() == maxv && randomOrder == 0)) { // For participants with the same number of available deltas, random ordering among participants is used to remove bias
+                        maxv = numberOfDeltas.get(i).size();
+                        maxp = i;
+                    }
+                }
+
+                for(int i = mtuArrayList.size(); i < mtuSize && i < numberOfDeltas.get(maxp).size(); i++) {
+                    mtuArrayList.add(numberOfDeltas.get(maxp).get(i));
+                }
+
+                numberOfDeltas.remove(maxp);
+            }
         }
         return mtuArrayList;
     }
