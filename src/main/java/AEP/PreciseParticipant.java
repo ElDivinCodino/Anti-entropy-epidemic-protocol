@@ -26,8 +26,8 @@ public class PreciseParticipant extends Participant {
     }
 
     protected void initValues(SetupMessage message){
-        super.initValues(message);
         this.mtu = message.getMtu();
+        super.initValues(message);
     }
 
     protected void startGossip(StartGossip message){
@@ -51,7 +51,7 @@ public class PreciseParticipant extends Participant {
             logger.info("Fourth phase: sending differences to " + getSender());
         } else {
             // receiving message(s) from q.
-            if (getSender() == null) { // this is the message with deltas
+            if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
                 storage.reconciliation(message.getParticipantStates());
                 logger.info("Gossip completed");
             } else { // digest message to respond to

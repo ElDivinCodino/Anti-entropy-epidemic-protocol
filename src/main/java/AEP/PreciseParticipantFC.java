@@ -70,7 +70,7 @@ public class PreciseParticipantFC extends PreciseParticipant{
             logger.info("Fourth phase: sending differences to " + getSender());
         } else {
             // receiving message(s) from q.
-            if (getSender() == null) { // this is the message with deltas
+            if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
                 // get the new maximum update rate computed at node p
                 this.maximumUR = message.getMaximumUR();
                 // update local states with deltas sent by p

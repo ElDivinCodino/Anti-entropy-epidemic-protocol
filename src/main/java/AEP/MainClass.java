@@ -56,7 +56,7 @@ public class MainClass {
         // Set up all the participants
         for (int i = 0; i < participants; i++) {
             participantName = "Participant_" + i;
-            ActorRef node = system.actorOf(Props.create(Participant.class, i), participantName);
+            ActorRef node = system.actorOf(Props.create(PreciseParticipant.class, i), participantName);
             ps.add(node);
         }
 

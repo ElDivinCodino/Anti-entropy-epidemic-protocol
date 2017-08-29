@@ -25,7 +25,7 @@ public class Participant extends UntypedActor{
     protected int tuplesNumber;
     protected int id;
 
-    protected int updateRate = 1000000;
+    protected int updateRate = 1;
     protected int gossipRate = 1;  // one gossip message per second
 
     // experiment parameters
@@ -36,8 +36,8 @@ public class Participant extends UntypedActor{
 
     public Participant(int id) {
         this.id = id;
-        this.current_timestep = 0;  // beginning of experiment
-        this.current_timestep_index = 1;  // index of timestep list
+        this.current_timestep = -1;  // beginning of experiment
+        this.current_timestep_index = 0;  // index of timestep list
 
         this.logger = new CustomLogger("P" + this.id);
         this.logger.setLevel(CustomLogger.LOG_LEVEL.DEBUG);
@@ -50,10 +50,14 @@ public class Participant extends UntypedActor{
         this.timesteps = message.getTimesteps();
         this.updaterates = message.getUpdaterates();
         assert timesteps.size() == updaterates.size();
+
+        // get the first update rate
+        this.updateRate = this.updaterates.get(0);
     }
 
     private void setupMessage(SetupMessage message){
         initValues(message);
+        increaseTimeStep();
         logger.info("Setup completed for node " + id);
 
         scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
@@ -63,14 +67,16 @@ public class Participant extends UntypedActor{
     protected void increaseTimeStep(){
         // increase time counter
         this.current_timestep++;
+        logger.debug("current_timestep" + this.current_timestep);
         // if this is the last timestep, stop the experiment
-        if (this.current_timestep_index == this.timesteps.size()-1){
+        if (this.current_timestep == this.timesteps.get(this.timesteps.size()-1)){
             logger.info("End of experiment for Participant " + this.id);
-            // TODO: end the experiment
+            context().system().terminate();
         }
         // if there is a change in the update rate
         if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
-            this.updateRate = this.updaterates.get(this.current_timestep_index);
+            this.updateRate = Math.round(1000 / this.updaterates.get(this.current_timestep_index));
+            logger.debug("Update rate changed to " + this.updateRate + " for p " + this.id);
             this.current_timestep_index++;
         }
     }
@@ -110,7 +116,7 @@ public class Participant extends UntypedActor{
             logger.info("Gossip exchange with node " + sender() + " completed");
         } else {
             // second phase, receiving message(s) from q.
-            if (getSender() == null){ // this is the message with deltas
+            if (getSender() == getContext().system().deadLetters()){ // this is the message with deltas
                 storage.reconciliation(message.getParticipantStates());
             }else{ // digest message to respond to
                 // send to q last message of exchange with deltas.
