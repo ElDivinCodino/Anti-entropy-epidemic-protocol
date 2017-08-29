@@ -14,9 +14,20 @@ public class GossipMessage implements Serializable{
     private boolean isSender;
     private ArrayList<Delta> participantStates;
 
+    // flow control parameters
+    long desiredUR;
+    long maximumUR;
+
     public GossipMessage(boolean isSender, ArrayList<Delta> states) {
         this.isSender = isSender;
         this.participantStates = states;
+    }
+
+    public GossipMessage(boolean isSender, ArrayList<Delta> states, long desiredUR, long maximumUR) {
+        this.isSender = isSender;
+        this.participantStates = states;
+        this.desiredUR = desiredUR;
+        this.maximumUR = maximumUR;
     }
 
     /**
@@ -33,5 +44,13 @@ public class GossipMessage implements Serializable{
      */
     public boolean isSender() {
         return isSender;
+    }
+
+    public long getDesiredUR() {
+        return desiredUR;
+    }
+
+    public long getMaximumUR() {
+        return maximumUR;
     }
 }
