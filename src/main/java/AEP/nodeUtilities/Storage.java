@@ -11,17 +11,18 @@ import static AEP.PreciseParticipant.Ordering;
 public class Storage {
 
     private ArrayList<Delta> participantStates = new ArrayList<>();
-
+    private CustomLogger logger;
     private String pathname;
     private int tuplesNumber;
     private int participantNumber;
     private int id;
 
-    public Storage(String pathname, int participantsNumber, int tuplesNumber, int id) {
+    public Storage(String pathname, int participantsNumber, int tuplesNumber, int id, CustomLogger logger) {
         this.pathname = pathname;
         this.tuplesNumber = tuplesNumber;
         this.participantNumber = participantsNumber;
         this.id = id;
+        this.logger = logger;
         initializeStates(participantsNumber, tuplesNumber);
     }
 
@@ -171,7 +172,7 @@ public class Storage {
      */
     public ArrayList<Delta> computeScuttlebuttDifferences(ArrayList<Delta> digest) {
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
-        System.out.println(digest);
+        logger.debug("computeScuttlebuttDifferences digest is " + digest.toString());
         for (int i = 0; i < digest.size(); i++){
             for (int index = i * tuplesNumber; index < tuplesNumber * (i + 1); index++) {
                 if (digest.get(i).getP() == participantStates.get(index).getP() &&
@@ -186,22 +187,18 @@ public class Storage {
                 }
             }
         }
+        logger.debug("to be updated is " + toBeUpdated.toString());
         return toBeUpdated;
     }
 
-    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Ordering method) {
+    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Comparator comparator, Ordering method) {
 
         if (state.size() <= mtuSize){
             return state;
         }
         ArrayList<Delta> mtuArrayList = new ArrayList<>();
 
-        Collections.sort(state, new Comparator<Delta>() {
-            @Override
-            public int compare(Delta o1, Delta o2) {
-                return o1.getV().compareTo(o2.getV());
-            }
-        });
+        Collections.sort(state, comparator);
 
         if (method == Ordering.OLDEST) { // ascending order (first is smallest timestamp)
             mtuArrayList.addAll(state.subList(0, mtuSize));

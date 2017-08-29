@@ -5,6 +5,7 @@ import AEP.messages.StartGossip;
 import AEP.nodeUtilities.Delta;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
 /**
  * Created by StefanoFiora on 28/08/2017.
@@ -23,7 +24,7 @@ public class PreciseParticipantFC extends PreciseParticipant{
         // sender set to null because we do not need to answer to this message
         ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
         getSender().tell(new GossipMessage(false,
-                storage.mtuResizeAndSort(toBeUpdated, mtu ,this.method),
+                storage.mtuResizeAndSort(toBeUpdated, mtu, new PreciseComparator(), this.method),
                 this.desiredUR,
                 this.maximumUR), null);
         // send to p the second message containing the digest (NOTE: in the paper it should be just the outdated entries that q requests to p)
@@ -43,7 +44,7 @@ public class PreciseParticipantFC extends PreciseParticipant{
             // answer with the updates p has to do. Sender set to null because we do not need to answer to this message
             ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
             getSender().tell(new GossipMessage(false,
-                    storage.mtuResizeAndSort(toBeUpdated, mtu ,this.method),
+                    storage.mtuResizeAndSort(toBeUpdated, mtu , new PreciseComparator(), this.method),
                     0,
                     senderMaximumUR), null);
 
@@ -59,7 +60,10 @@ public class PreciseParticipantFC extends PreciseParticipant{
             } else { // digest message to respond to
                 // send to q last message of exchange with deltas.
                 ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
-                getSender().tell(new GossipMessage(true, storage.mtuResizeAndSort(toBeUpdated, mtu, this.method)), self());
+                getSender().tell(new GossipMessage(true,
+                        storage.mtuResizeAndSort(toBeUpdated, mtu, new PreciseComparator(), this.method),
+                        this.desiredUR,
+                        this.maximumUR), self());
                 logger.info("Third phase: sending differences to " + getSender());
             }
         }
@@ -88,5 +92,12 @@ public class PreciseParticipantFC extends PreciseParticipant{
         // this invariant must hold between updates
         assert oldMax1 + oldMax2 == this.maximumUR + senderMaximumUR;
         return senderMaximumUR;
+    }
+
+    private class PreciseComparator implements Comparator<Delta> {
+        @Override
+        public int compare(Delta o1, Delta o2) {
+            return ((Long)o1.getN()).compareTo(o2.getN());
+        }
     }
 }
