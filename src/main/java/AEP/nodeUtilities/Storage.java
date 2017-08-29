@@ -14,11 +14,13 @@ public class Storage {
 
     private String pathname;
     private int tuplesNumber;
+    private int participantNumber;
     private int id;
 
     public Storage(String pathname, int participantsNumber, int tuplesNumber, int id) {
         this.pathname = pathname;
         this.tuplesNumber = tuplesNumber;
+        this.participantNumber = participantsNumber;
         this.id = id;
         initializeStates(participantsNumber, tuplesNumber);
     }
@@ -53,16 +55,40 @@ public class Storage {
         Delta deltaToBeUpdated = participantStates.get((id * tuplesNumber) + key);
         deltaToBeUpdated.setV(value);
         deltaToBeUpdated.setN(System.currentTimeMillis());
+
+        save();
     }
 
     /**
      * This method performs the digest of the storage of the participant
-     * @return a TreeMap containing the states of the participants with null values
+     * @return a ArrayList containing the states of the participants with null values
      */
     public ArrayList<Delta> createDigest() {
         ArrayList<Delta> digest = new ArrayList<>();
         for (Delta d : this.participantStates){
             digest.add(new Delta(d.getP(), d.getK(), null, d.getN()));
+        }
+        return digest;
+    }
+
+    /**
+     * This method performs the digest of the storage of the participant following Scuttlebutt directives
+     * @return a ArrayList containing the maximum version number for each participant
+     */
+    public ArrayList<Delta> createScuttlebuttDigest() {
+        ArrayList<Delta> digest = new ArrayList<>();
+
+        for (int i = 0; i < participantNumber; i++){
+            long higherVersion = -1;
+            long key = -1;
+
+            for (int j = i * tuplesNumber; j < (1 + i) * tuplesNumber; j++ ) {
+                if (participantStates.get(j).getN() > higherVersion) {
+                    higherVersion = participantStates.get(j).getN();
+                    key = participantStates.get(j).getK();
+                }
+            }
+            digest.add(new Delta(i, key, null, higherVersion));
         }
         return digest;
     }
@@ -79,7 +105,7 @@ public class Storage {
             for (int index = 0; index < this.participantStates.size(); index++) {
                 if (d.getP() == participantStates.get(index).getP() &&
                         d.getK() == participantStates.get(index).getK() &&
-                        d.getN() >= participantStates.get(index).getN()) {
+                        d.getN() > participantStates.get(index).getN()) {
                     participantStates.get(index).setV(d.getV());
                     participantStates.get(index).setN(d.getN());
                     // increase index of local state and exit current for loop
@@ -105,8 +131,9 @@ public class Storage {
     }
 
     /**
+     * TODO: controlla il comment, ci sono degli errori di legacy
      * This method provides the computation of the differences between the received digest and the current states.
-     * If the received digest has Couples with higher version, it means that the peer knows a needed update; otherwise inform
+     * If the received digest has tuples with higher version, it means that the peer knows a needed update; otherwise inform
      * the peer to not be interested in that information by setting its value to null
      * @param digest the digest coming from the other peer
      * @return a TreeMap indicating the values which needs to be updated
@@ -132,6 +159,34 @@ public class Storage {
                 }
             }
         }
+        return toBeUpdated;
+    }
+
+    /**
+     * This method provides the computation of the differences between the received digest and the current states following Scuttlebutt directives:.
+     * If the received digest has tuples with maximum version lower than a value, it means that the peer needs to know some the keys that have higher version
+     * for that specific participant and so need to be updated
+     * @param digest the digest coming from the other peer
+     * @return a TreeMap indicating the values which needs to be updated
+     */
+    public ArrayList<Delta> computeScuttlebuttDifferences(ArrayList<Delta> digest) {
+        ArrayList<Delta> toBeUpdated= new ArrayList<>();
+        for (int i = 0; i < digest.size(); i++){
+            for (int index = i * tuplesNumber; index < tuplesNumber * (i + 1); index++) {
+                if (digest.get(i).getP() == participantStates.get(index).getP() &&
+                        digest.get(i).getN() < participantStates.get(index).getN()) {
+                    toBeUpdated.add(new Delta(
+                            participantStates.get(index).getP(),
+                            participantStates.get(index).getK(),
+                            participantStates.get(index).getV(),
+                            participantStates.get(index).getN()));
+                    // increase index of local state and exit current for loop
+                    // to get the next delta
+                    break;
+                }
+            }
+        }
+
         return toBeUpdated;
     }
 
