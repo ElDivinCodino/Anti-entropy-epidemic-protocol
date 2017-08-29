@@ -17,16 +17,16 @@ import java.util.concurrent.TimeUnit;
  */
 public class ScuttlebuttParticipant extends PreciseParticipant {
 
-    public ScuttlebuttParticipant(String destinationPath, int id) {
-        super(destinationPath, id);
-    }
-
     // Maximum Transfer Unit: maximum number of deltas inside a single gossip message
     private int mtu = 5;
 
-    public static enum Ordering { OLDEST, NEWEST};
-    private PreciseParticipant.Ordering method;
+    private Ordering method;
     private TreeMap<ActorRef, ArrayList<Delta>> storedDigests = new TreeMap<>();
+
+    public ScuttlebuttParticipant(String destinationPath, int id) {
+        super(destinationPath, id);
+        method = Ordering.SCUTTLEDEPTH;
+    }
 
     protected void timeoutMessage(TimeoutMessage message){
         int rndId;
@@ -80,15 +80,18 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
         }
     }
 
+    /**
+     * Comparator for Scuttlebutt: first order from the older to the newer, than in case of same version, order by participant
+     */
     private class ScuttlebuttComparator implements Comparator<Delta> {
         int c;
 
         @Override
         public int compare(Delta o1, Delta o2) {
-            c = (((Long)o1.getP()).compareTo(o2.getP()));
+            c =((Long)o1.getN()).compareTo(o2.getN());
 
             if(c == 0)
-                c =((Long)o1.getN()).compareTo(o2.getN());
+                c = (((Long)o1.getP()).compareTo(o2.getP()));
 
             return c;
         }
