@@ -16,9 +16,11 @@ public class CustomLogger {
     public enum LOG_LEVEL { INFO, DEBUG };
     private LOG_LEVEL level;
     private String prefix;
+    private String processName;
 
-    public CustomLogger(){
+    public CustomLogger(String processName){
         this.prefix = null;
+        this.processName = processName;
     }
 
     private String applyArgsToString(String message, Object[] args){
@@ -33,7 +35,16 @@ public class CustomLogger {
         return message;
     }
 
+    private String addProcessName(String prefix){
+        if (this.processName == null){
+            return prefix;
+        }else {
+            return prefix + ANSI_CYAN + "[" +  processName + "] " + ANSI_RESET;
+        }
+    }
+
     private String addPrefix(String message){
+        this.prefix = this.addProcessName(this.prefix);
         if (this.prefix == null){
             return message;
         }else {

@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 public class Participant extends UntypedActor{
 
     // custom logger to display useful stuff to console
-    protected CustomLogger logger = new CustomLogger();
+    protected CustomLogger logger;
 
     // Where all the data items are stored.
     protected Storage storage = null;
@@ -28,6 +28,7 @@ public class Participant extends UntypedActor{
     protected int updateRate = 1000;
 
     public Participant(String destinationPath, int id) {
+        this.logger = new CustomLogger("P" + id);
         this.storagePath = destinationPath;
         this.id = id;
         this.logger.setLevel(CustomLogger.LOG_LEVEL.DEBUG);
@@ -39,7 +40,7 @@ public class Participant extends UntypedActor{
 
         storage = new Storage(storagePath, ps.size(), tuplesNumber, id);
 
-        logger.debug("Setup completed for node " + id);
+        logger.info("Setup completed for node " + id);
 
         scheduleTimeout(1, TimeUnit.SECONDS);
         scheduleUpdateTimeout(updateRate, TimeUnit.MILLISECONDS);
@@ -54,7 +55,7 @@ public class Participant extends UntypedActor{
         ActorRef q = ps.get(rndId);
 
         q.tell(new StartGossip(storage.createDigest()), self());
-        logger.debug("Timeout: sending StartGossip to " + q);
+        logger.info("Timeout: sending StartGossip to " + q);
         scheduleTimeout(1, TimeUnit.SECONDS);
     }
 
@@ -63,19 +64,19 @@ public class Participant extends UntypedActor{
      * @param message
      */
     protected void startGossip(StartGossip message){
-        logger.debug("First phase: Digest from " + getSender());
+        logger.info("First phase: Digest from " + getSender());
         ArrayList<Delta> digest = ((StartGossip) message).getParticipantStates();
         // sender set to null because we do not need to answer to this message
         getSender().tell(new GossipMessage(false, storage.computeDifferences(digest)), null);
         // send to p the second message containing the digest (NOTE: in the paper it should be just the outdated entries that q requests to p)
         getSender().tell(new GossipMessage(false, storage.createDigest()), self());
-        logger.debug("Second phase: sending differences + digest to " + getSender());
+        logger.info("Second phase: sending differences + digest to " + getSender());
     }
 
     protected void gossipMessage(GossipMessage message){
         if (message.isSender()) {
             storage.reconciliation(message.getParticipantStates());
-            logger.debug("Gossip exchange with node " + sender() + " completed");
+            logger.info("Gossip exchange with node " + sender() + " completed");
         } else {
             // second phase, receiving message(s) from q.
             if (getSender() == null){ // this is the message with deltas
@@ -84,7 +85,7 @@ public class Participant extends UntypedActor{
                 // send to q last message of exchange with deltas.
                 getSender().tell(new GossipMessage(true, storage.computeDifferences(message.getParticipantStates())), self());
             }
-            logger.debug("Third phase: sending differences to " + getSender());
+            logger.info("Third phase: sending differences to " + getSender());
         }
     }
 
@@ -101,7 +102,7 @@ public class Participant extends UntypedActor{
     }
 
     public void onReceive(Object message) throws Exception {
-        logger.debug("Received Message {}", message.toString());
+        logger.info("Received Message {}", message.toString());
 
         // class name is represented as dynamo.messages.className, so split and take last element.
         switch (message.getClass().getName().split("[.]")[2]) {
@@ -133,7 +134,7 @@ public class Participant extends UntypedActor{
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
-        logger.debug("scheduleTimeout: scheduled timeout in {} {}",
+        logger.info("scheduleTimeout: scheduled timeout in {} {}",
                 time, unit.toString());
     }
 
@@ -146,7 +147,7 @@ public class Participant extends UntypedActor{
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new UpdateTimeout(), getContext().system().dispatcher(), getSelf());
-        logger.debug("scheduleUpdateTimeout: scheduled timeout for an update in {} {}",
+        logger.info("scheduleUpdateTimeout: scheduled timeout for an update in {} {}",
                 time, unit.toString());
     }
 }

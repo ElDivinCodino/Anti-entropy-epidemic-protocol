@@ -171,6 +171,7 @@ public class Storage {
      */
     public ArrayList<Delta> computeScuttlebuttDifferences(ArrayList<Delta> digest) {
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
+        System.out.println(digest);
         for (int i = 0; i < digest.size(); i++){
             for (int index = i * tuplesNumber; index < tuplesNumber * (i + 1); index++) {
                 if (digest.get(i).getP() == participantStates.get(index).getP() &&
@@ -182,11 +183,9 @@ public class Storage {
                             participantStates.get(index).getN()));
                     // increase index of local state and exit current for loop
                     // to get the next delta
-                    break;
                 }
             }
         }
-
         return toBeUpdated;
     }
 
