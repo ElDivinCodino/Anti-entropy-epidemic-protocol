@@ -1,6 +1,7 @@
 package AEP;
 
 import AEP.messages.GossipMessage;
+import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
 import AEP.messages.TimeoutMessage;
 import AEP.nodeUtilities.Delta;
@@ -17,18 +18,19 @@ import java.util.concurrent.TimeUnit;
  */
 public class ScuttlebuttParticipant extends PreciseParticipant {
 
-    public ScuttlebuttParticipant(String destinationPath, int id) {
-        super(destinationPath, id);
-    }
-
-    // Maximum Transfer Unit: maximum number of deltas inside a single gossip message
-    private int mtu = 5;
-
-    public static enum Ordering { OLDEST, NEWEST};
     private PreciseParticipant.Ordering method;
     private TreeMap<ActorRef, ArrayList<Delta>> storedDigests = new TreeMap<>();
 
+    public ScuttlebuttParticipant(int id) {
+        super(id);
+    }
+
+    protected void initValues(SetupMessage message){
+        super.initValues(message);
+    }
+
     protected void timeoutMessage(TimeoutMessage message){
+        this.increaseTimeStep();
         int rndId;
         // choose a random peer excluding self
         do {
@@ -38,7 +40,7 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
 
         q.tell(new StartGossip(storage.createScuttlebuttDigest()), self());
         logger.info("Timeout: sending StartGossip to " + q);
-        scheduleTimeout(1, TimeUnit.SECONDS);
+        scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
     }
 
     protected void startGossip(StartGossip message){

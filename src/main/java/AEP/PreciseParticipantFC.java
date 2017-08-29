@@ -1,6 +1,7 @@
 package AEP;
 
 import AEP.messages.GossipMessage;
+import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
 import AEP.nodeUtilities.Delta;
 
@@ -12,11 +13,26 @@ import java.util.Comparator;
  */
 public class PreciseParticipantFC extends PreciseParticipant{
 
-    private long desiredUR;
-    private long maximumUR;
+    private float desiredUR;
+    private float maximumUR;
 
-    public PreciseParticipantFC(String destinationPath, int id) {
-        super(destinationPath, id);
+    // local adaptation variables
+    private int phiBiggerMax;
+    private int phiSmallerMax;
+    private int phiBiggerCounter;
+    private int phiSmallerCounter;
+
+    private float alpha;
+    private float beta;
+
+    public PreciseParticipantFC(int id) {
+        super(id);
+    }
+
+    protected void initValues(SetupMessage message){
+        super.initValues(message);
+        this.alpha = message.getAlpha();
+        this.beta = message.getBeta();
     }
 
     protected void startGossip(StartGossip message){
@@ -39,10 +55,13 @@ public class PreciseParticipantFC extends PreciseParticipant{
 
             // here we calculate the new flow control parameters updating the local maximum update rate
             // the sender update rate gets included in the gossip message to q
-            long senderMaximumUR = computeUpdateRate(message.getMaximumUR(), message.getDesiredUR());
+            float senderMaximumUR = computeUpdateRate(message.getMaximumUR(), message.getDesiredUR());
 
             // answer with the updates p has to do. Sender set to null because we do not need to answer to this message
             ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
+
+            localAdaptation(toBeUpdated.size());
+
             getSender().tell(new GossipMessage(false,
                     storage.mtuResizeAndSort(toBeUpdated, mtu , new PreciseComparator(), this.method),
                     0,
@@ -60,6 +79,9 @@ public class PreciseParticipantFC extends PreciseParticipant{
             } else { // digest message to respond to
                 // send to q last message of exchange with deltas.
                 ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
+
+                localAdaptation(toBeUpdated.size());
+
                 getSender().tell(new GossipMessage(true,
                         storage.mtuResizeAndSort(toBeUpdated, mtu, new PreciseComparator(), this.method),
                         this.desiredUR,
@@ -69,12 +91,12 @@ public class PreciseParticipantFC extends PreciseParticipant{
         }
     }
 
-    private long computeUpdateRate(long senderMaximumUR, long senderDesiredUR){
-        long oldMax1 = this.maximumUR;
-        long oldMax2 = senderMaximumUR;
-        long maxRateAvg = (this.maximumUR + senderMaximumUR) / 2;
+    private float computeUpdateRate(float senderMaximumUR, float senderDesiredUR){
+        float oldMax1 = this.maximumUR;
+        float oldMax2 = senderMaximumUR;
+        float maxRateAvg = (this.maximumUR + senderMaximumUR) / 2;
         if (this.desiredUR + senderDesiredUR <= this.maximumUR + senderMaximumUR){
-            long delta = this.desiredUR + senderDesiredUR - this.maximumUR - senderMaximumUR;
+            float delta = this.desiredUR + senderDesiredUR - this.maximumUR - senderMaximumUR;
             this.maximumUR = this.desiredUR + delta / 2;
             senderMaximumUR = senderDesiredUR + delta / 2;
         }else {  // this.desiredUR + senderDesiredUR > this.maximumUR + senderMaximumUR
@@ -92,6 +114,25 @@ public class PreciseParticipantFC extends PreciseParticipant{
         // this invariant must hold between updates
         assert oldMax1 + oldMax2 == this.maximumUR + senderMaximumUR;
         return senderMaximumUR;
+    }
+
+    private void localAdaptation(int messageSize){
+        if (messageSize > this.mtu) {
+            this.phiBiggerCounter++;
+            // reset smaller counter
+            this.phiSmallerCounter = 0;
+        }else if (messageSize < this.mtu){
+            this.phiSmallerCounter++;
+            this.phiBiggerCounter = 0;
+        }
+
+        // check if a counter has surpassed the threshold
+        if (this.phiBiggerCounter >= this.phiBiggerMax){
+            this.maximumUR = this.alpha * this.maximumUR;
+        }
+        if (this.phiSmallerCounter >= this.phiSmallerMax){
+            this.maximumUR = Math.min(this.maximumUR + this.beta, mtu);
+        }
     }
 
     private class PreciseComparator implements Comparator<Delta> {

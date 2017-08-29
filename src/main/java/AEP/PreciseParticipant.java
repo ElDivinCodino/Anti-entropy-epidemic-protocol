@@ -1,11 +1,13 @@
 package AEP;
 
 import AEP.messages.GossipMessage;
+import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
 import AEP.nodeUtilities.Delta;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  * Created by StefanoFiora on 28/08/2017.
@@ -13,14 +15,19 @@ import java.util.Comparator;
 public class PreciseParticipant extends Participant {
 
     // Maximum Transfer Unit: maximum number of deltas inside a single gossip message
-    protected int mtu = 5;
+    protected int mtu;
 
     public static enum Ordering { OLDEST, NEWEST};
     protected Ordering method;
 
-    public PreciseParticipant(String destinationPath, int id) {
-        super(destinationPath, id);
+    public PreciseParticipant(int id) {
+        super(id);
         this.method = Ordering.OLDEST;
+    }
+
+    protected void initValues(SetupMessage message){
+        super.initValues(message);
+        this.mtu = message.getMtu();
     }
 
     protected void startGossip(StartGossip message){

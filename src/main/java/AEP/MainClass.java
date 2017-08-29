@@ -17,9 +17,6 @@ import java.util.List;
  */
 public class MainClass {
 
-    private int n = 4; // number of nodes/participants belonging to the network
-    private int p = 5; // number of (key,value) pairs for each participant
-
     private List<ActorRef> ps = new ArrayList<ActorRef>();
 
     public static void main(String[] args) {
@@ -34,6 +31,14 @@ public class MainClass {
         String participantName;
         Config myConfig = ConfigFactory.load("application");
         String destinationPath = myConfig.getString("aep.storage.location");
+        Integer participants = myConfig.getInt("aep.participants.p");
+        Integer deltas = myConfig.getInt("aep.participants.keys");
+        Integer mtu = myConfig.getInt("aep.participants.mtu");
+        Float alpha = (float)myConfig.getDouble("aep.flowcontrol.alpha");
+        Float beta = (float)myConfig.getDouble("aep.flowcontrol.beta");
+
+        List<Integer> timesteps = myConfig.getIntList("aep.execution.timesteps");
+        List<Integer> updaterates = myConfig.getIntList("aep.execution.updaterates");
 
         try {
             localIP = InetAddress.getLocalHost().getHostAddress();
@@ -49,14 +54,16 @@ public class MainClass {
         ActorSystem system = ActorSystem.create("AEP", custom.withFallback(myConfig));
 
         // Set up all the participants
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < participants; i++) {
             participantName = "Participant_" + i;
-            ActorRef node = system.actorOf(Props.create(ScuttlebuttParticipant.class, destinationPath + "/" + participantName, i), participantName);
+            ActorRef node = system.actorOf(Props.create(Participant.class, i), participantName);
             ps.add(node);
         }
 
-        for (ActorRef participant : ps) {
-            participant.tell(new SetupMessage(p, ps), null);
+        for (int i = 0; i < ps.size(); i++) {
+            participantName = "Participant_" + i;
+            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName, timesteps, updaterates, alpha, beta), null);
         }
+
     }
 }

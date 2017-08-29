@@ -26,27 +26,58 @@ public class Participant extends UntypedActor{
     protected int id;
 
     protected int updateRate = 1000000;
+    protected int gossipRate = 1;  // one gossip message per second
 
-    public Participant(String destinationPath, int id) {
-        this.logger = new CustomLogger("P" + id);
-        this.storagePath = destinationPath;
+    // experiment parameters
+    int current_timestep;
+    int current_timestep_index;
+    List<Integer> timesteps;
+    List<Integer> updaterates;
+
+    public Participant(int id) {
         this.id = id;
+        this.current_timestep = 0;  // beginning of experiment
+        this.current_timestep_index = 1;  // index of timestep list
+
+        this.logger = new CustomLogger("P" + this.id);
         this.logger.setLevel(CustomLogger.LOG_LEVEL.DEBUG);
     }
 
-    protected void setupMessage(SetupMessage message){
-        tuplesNumber = message.getCouplesNumber();
-        ps = message.getParticipants();
+    protected void initValues(SetupMessage message){
+        this.tuplesNumber = message.getTuplesNumber();
+        this.ps = message.getPs();
+        this. storage = new Storage(message.getStoragePath(), ps.size(), tuplesNumber, id, logger);
+        this.timesteps = message.getTimesteps();
+        this.updaterates = message.getUpdaterates();
+        assert timesteps.size() == updaterates.size();
+    }
 
-        storage = new Storage(storagePath, ps.size(), tuplesNumber, id, logger);
-
+    private void setupMessage(SetupMessage message){
+        initValues(message);
         logger.info("Setup completed for node " + id);
 
-        scheduleTimeout(1, TimeUnit.SECONDS);
+        scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
         scheduleUpdateTimeout(updateRate, TimeUnit.MILLISECONDS);
     }
 
+    protected void increaseTimeStep(){
+        // increase time counter
+        this.current_timestep++;
+        // if this is the last timestep, stop the experiment
+        if (this.current_timestep_index == this.timesteps.size()-1){
+            logger.info("End of experiment for Participant " + this.id);
+            // TODO: end the experiment
+        }
+        // if there is a change in the update rate
+        if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
+            this.updateRate = this.updaterates.get(this.current_timestep_index);
+            this.current_timestep_index++;
+        }
+    }
+
     protected void timeoutMessage(TimeoutMessage message){
+        this.increaseTimeStep();
+
         int rndId;
         // choose a random peer excluding self
         do {
@@ -56,7 +87,7 @@ public class Participant extends UntypedActor{
 
         q.tell(new StartGossip(storage.createDigest()), self());
         logger.info("Timeout: sending StartGossip to " + q);
-        scheduleTimeout(1, TimeUnit.SECONDS);
+        scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
     }
 
     /**
@@ -89,12 +120,12 @@ public class Participant extends UntypedActor{
         }
     }
 
-    protected void update() {
+    private void update() {
         String newValue = Utilities.getRandomNum(0, 1000).toString();
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);
         storage.update(keyToBeUpdated, newValue);
 
-        scheduleUpdateTimeout(updateRate, TimeUnit.MILLISECONDS);
+        scheduleUpdateTimeout(this.updateRate, TimeUnit.MILLISECONDS);
     }
 
     protected void test(Object message){
@@ -143,7 +174,7 @@ public class Participant extends UntypedActor{
      * @param time quantity of time chosen
      * @param unit time unit measurement chosen
      */
-    protected void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
+    private void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new UpdateTimeout(), getContext().system().dispatcher(), getSelf());
