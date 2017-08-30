@@ -3,6 +3,7 @@ package AEP;
 import AEP.messages.GossipMessage;
 import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
+import AEP.nodeUtilities.CustomLogger;
 import AEP.nodeUtilities.Delta;
 
 import java.util.ArrayList;
@@ -22,8 +23,8 @@ public class PreciseParticipantFC extends PreciseParticipant{
     private float alpha;
     private float beta;
 
-    public PreciseParticipantFC(int id) {
-        super(id);
+    public PreciseParticipantFC(int id, CustomLogger.LOG_LEVEL level) {
+        super(id, level);
     }
 
     protected void initValues(SetupMessage message){

@@ -3,6 +3,7 @@ package AEP;
 import AEP.messages.GossipMessage;
 import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
+import AEP.nodeUtilities.CustomLogger;
 import AEP.nodeUtilities.Delta;
 
 import java.util.ArrayList;
@@ -20,8 +21,8 @@ public class PreciseParticipant extends Participant {
     public enum Ordering { OLDEST, NEWEST, SCUTTLEBREADTH, SCUTTLEDEPTH};
     protected Ordering method;
 
-    public PreciseParticipant(int id) {
-        super(id);
+    public PreciseParticipant(int id, CustomLogger.LOG_LEVEL level) {
+        super(id, level);
     }
 
     protected void initValues(SetupMessage message){
