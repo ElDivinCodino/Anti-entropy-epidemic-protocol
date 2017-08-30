@@ -1,6 +1,7 @@
 package AEP;
 
 import AEP.messages.SetupMessage;
+import AEP.nodeUtilities.CustomLogger;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
@@ -43,6 +44,20 @@ public class MainClass {
         Integer phi1 = myConfig.getInt("aep.flowcontrol.phi1");
         Integer phi2 = myConfig.getInt("aep.flowcontrol.phi2");
         Boolean flow_control = false;
+        String loglevel = myConfig.getString("aep.logger.level");
+        CustomLogger.LOG_LEVEL level = null;
+
+        switch (loglevel) {
+            case "INFO":
+                level = CustomLogger.LOG_LEVEL.INFO;
+                break;
+            case "DEBUG":
+                level = CustomLogger.LOG_LEVEL.DEBUG;
+                break;
+            case "OFF":
+                level = CustomLogger.LOG_LEVEL.OFF;
+                break;
+        }
 
         List<Integer> timesteps = myConfig.getIntList("aep.execution.timesteps");
         List<Integer> updaterates = myConfig.getIntList("aep.execution.updaterates");
@@ -85,7 +100,7 @@ public class MainClass {
         for (int i = 0; i < participants; i++) {
             participantName = "Participant_" + i;
 
-            ActorRef node = system.actorOf(Props.create(myClass, i), participantName);
+            ActorRef node = system.actorOf(Props.create(myClass, i, level), participantName);
             ps.add(node);
         }
 

@@ -13,7 +13,7 @@ public class CustomLogger {
     public static final String ANSI_CYAN = ANSI_PREFIX + "36m";
     public static final String ANSI_WHITE = ANSI_PREFIX + "37m";
 
-    public enum LOG_LEVEL { INFO, DEBUG };
+    public enum LOG_LEVEL { INFO, DEBUG, ERROR, OFF }
     private LOG_LEVEL level;
     private String prefix;
     private String processName;
@@ -59,7 +59,8 @@ public class CustomLogger {
 
     public void info(String message, Object... args){
         this.prefix = ANSI_CYAN + "[INFO] " + ANSI_RESET;
-        System.out.println(this.format(this.applyArgsToString(message, args)));
+        if (this.level != LOG_LEVEL.OFF)
+            System.out.println(this.format(this.applyArgsToString(message, args)));
     }
 
     public void debug(String message, Object... args){
@@ -71,6 +72,7 @@ public class CustomLogger {
 
     public void error(String message, Object... args){
         this.prefix = ANSI_RED + "[ERROR] " + ANSI_RESET;
+        if (this.level == LOG_LEVEL.ERROR)
         System.out.println(this.format(this.applyArgsToString(message, args)));
     }
 

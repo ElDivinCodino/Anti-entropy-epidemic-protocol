@@ -4,6 +4,7 @@ import AEP.messages.GossipMessage;
 import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
 import AEP.messages.TimeoutMessage;
+import AEP.nodeUtilities.CustomLogger;
 import AEP.nodeUtilities.Delta;
 import AEP.nodeUtilities.Utilities;
 import akka.actor.ActorRef;
@@ -20,8 +21,8 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
 
     private TreeMap<ActorRef, ArrayList<Delta>> storedDigests = new TreeMap<>();
 
-    public ScuttlebuttParticipant(int id) {
-        super(id);
+    public ScuttlebuttParticipant(int id, CustomLogger.LOG_LEVEL level) {
+        super(id, level);
     }
 
     protected void initValues(SetupMessage message){

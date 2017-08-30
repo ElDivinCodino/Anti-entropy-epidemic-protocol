@@ -38,13 +38,13 @@ public class Participant extends UntypedActor{
     List<Integer> timesteps;
     List<Integer> updaterates;
 
-    public Participant(int id) {
+    public Participant(int id, CustomLogger.LOG_LEVEL level) {
         this.id = id;
         this.current_timestep = -1;  // beginning of experiment
         this.current_timestep_index = 0;  // index of timestep list
 
         this.logger = new CustomLogger("P" + this.id);
-        this.logger.setLevel(CustomLogger.LOG_LEVEL.DEBUG);
+        this.logger.setLevel(level);
     }
 
     protected void initValues(SetupMessage message){
@@ -73,7 +73,7 @@ public class Participant extends UntypedActor{
     protected void increaseTimeStep(){
         // increase time counter
         this.current_timestep++;
-        logger.debug("current_timestep" + this.current_timestep);
+        System.out.println("current_timestep " + this.current_timestep);
         // if this is the last timestep, stop the experiment
         if (this.current_timestep == this.timesteps.get(this.timesteps.size()-1)){
             logger.info("End of experiment for Participant " + this.id);
