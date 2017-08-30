@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class ScuttlebuttParticipant extends PreciseParticipant {
 
-    private PreciseParticipant.Ordering method;
     private TreeMap<ActorRef, ArrayList<Delta>> storedDigests = new TreeMap<>();
 
     public ScuttlebuttParticipant(int id) {
@@ -37,6 +36,8 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
             rndId = Utilities.getRandomNum(0, ps.size() - 1);
         } while (rndId == this.id);
         ActorRef q = ps.get(rndId);
+
+        logger.debug("P " + this.id + " starts gossip with P " + rndId);
 
         q.tell(new StartGossip(storage.createScuttlebuttDigest()), self());
         logger.info("Timeout: sending StartGossip to " + q);
@@ -90,10 +91,10 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
 
         @Override
         public int compare(Delta o1, Delta o2) {
-            c =((Long)o1.getN()).compareTo(o2.getN());
+            c =((Long)o1.getP()).compareTo(o2.getP());
 
             if(c == 0)
-                c = (((Long)o1.getP()).compareTo(o2.getP()));
+                c = (((Long)o1.getN()).compareTo(o2.getN()));
 
             return c;
         }

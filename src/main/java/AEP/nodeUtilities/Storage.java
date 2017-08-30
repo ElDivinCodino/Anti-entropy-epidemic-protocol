@@ -57,6 +57,8 @@ public class Storage {
         deltaToBeUpdated.setV(value);
         deltaToBeUpdated.setN(System.currentTimeMillis());
 
+        logger.debug("P " + id + " updated key " + key + " with v: " + value + " t: " + deltaToBeUpdated.getN());
+
         save();
     }
 
@@ -102,6 +104,7 @@ public class Storage {
      */
     public void reconciliation (ArrayList<Delta> peerStates) {
 
+        logger.debug("Reconciliation peerStates:" + peerStates);
         for (Delta d : peerStates){
             for (int index = 0; index < this.participantStates.size(); index++) {
                 if (d.getP() == participantStates.get(index).getP() &&
@@ -189,6 +192,24 @@ public class Storage {
         return toBeUpdated;
     }
 
+    private TreeMap<Long, ArrayList<Delta>> statesToTreeMap(ArrayList<Delta> states){
+        // represents how many deltas are available for each process.
+        // Key is the process id, value is the number of deltas
+        TreeMap<Long, ArrayList<Delta>> numberOfDeltas = new TreeMap<>();
+        for (Delta d: states) {
+            long p = d.getP();
+
+            if (numberOfDeltas.containsKey(p)) {
+                numberOfDeltas.get(p).add(d);
+            } else {
+                ArrayList<Delta> newArray = new ArrayList<>();
+                newArray.add(d);
+                numberOfDeltas.put(p, newArray);
+            }
+        }
+        return numberOfDeltas;
+    }
+
     public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Comparator comparator, Ordering method) {
 
         if (state.size() <= mtuSize){
@@ -204,54 +225,24 @@ public class Storage {
             mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size()));
             Collections.reverse(mtuArrayList);
         } else if (method == Ordering.SCUTTLEBREADTH) {
-            if (mtuSize > 2) {
-                Delta current = state.get(0);
-                Delta next = state.get(1);
-                int randomOrder = Utilities.getRandomNum(0, 1);
-                int k; // int useful to know if we have just added current or next to mtuArrayList
-
-                for (int i = 2; i < mtuSize; i++) {
-                    if (current.getN() == next.getN()) {
-                        if (randomOrder == 0) {
-                            mtuArrayList.add(current);
-                            k = 1;
-                        } else {
-                            mtuArrayList.add(next);
-                            k = 0;
-                        }
-                    } else {
-                        mtuArrayList.add(current);
-                        k = 0;
-                    }
-
-                    if (k == 0) {
-                        next = state.get(i);
-                    } else {
-                        current = next;
-                        next = state.get(i);
+            TreeMap<Long, ArrayList<Delta>> numberOfDeltas = statesToTreeMap(state);
+            ArrayList<Long> randomP = new ArrayList<>(numberOfDeltas.keySet());
+            Collections.shuffle(randomP);
+            int filled = 0;
+            while (filled < mtuSize){
+                for (Long i : randomP){
+                    if (filled == mtuSize)
+                        break;
+                    if (numberOfDeltas.get(i).size() > 0) {
+                        mtuArrayList.add(numberOfDeltas.get(i).get(0));
+                        numberOfDeltas.get(i).remove(0);
+                        filled++;
                     }
                 }
-            } else if (mtuSize == 2){
-                mtuArrayList.add(state.get(0));
-                mtuArrayList.add(state.get(1));
-            } else {
-                mtuArrayList.add(state.get(0));
             }
         } else if (method == Ordering.SCUTTLEDEPTH) {
-            TreeMap<Long, ArrayList<Delta>> numberOfDeltas = new TreeMap<>(); // represents how many deltas are available for each process. Key is the process id, value is the number of deltas
             int randomOrder = Utilities.getRandomNum(0, 1);
-
-            for (Delta d: state) {
-                long p = d.getP();
-
-                if (numberOfDeltas.entrySet().contains(p)) {
-                    numberOfDeltas.get(p).add(d);
-                } else {
-                    ArrayList<Delta> newArray = new ArrayList<>();
-                    newArray.add(d);
-                    numberOfDeltas.put(p, newArray);
-                }
-            }
+            TreeMap<Long, ArrayList<Delta>> numberOfDeltas = statesToTreeMap(state);
 
             // while loop to decide which delta's to insert
             while (mtuArrayList.size() < mtuSize && numberOfDeltas.size() > 0) {

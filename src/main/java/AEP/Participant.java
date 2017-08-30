@@ -97,6 +97,8 @@ public class Participant extends UntypedActor{
         } while (rndId == this.id);
         ActorRef q = ps.get(rndId);
 
+        logger.debug("P " + this.id + " starts gossip with P " + q);
+
         q.tell(new StartGossip(storage.createDigest()), self());
         logger.info("Timeout: sending StartGossip to " + q);
         scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
