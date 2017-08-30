@@ -23,7 +23,6 @@ public class Participant extends UntypedActor{
 
     // Where all the data items are stored.
     protected Storage storage = null;
-    protected String storagePath;
     protected List<ActorRef> ps;
     protected int tuplesNumber;
     protected int id;
@@ -174,7 +173,6 @@ public class Participant extends UntypedActor{
             case "TimeoutMessage":
                 timeoutMessage((TimeoutMessage) message);
                 break;
-
             case "StartGossip":
                startGossip((StartGossip) message);
                 break;
