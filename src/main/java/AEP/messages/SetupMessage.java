@@ -21,6 +21,9 @@ public class SetupMessage implements Serializable {
     private float alpha;
     private float beta;
     private Ordering ordering;
+    private int phi1;
+    private int phi2;
+    boolean flow_control;
 
 
     public SetupMessage(int tuplesNumber, List participants) {
@@ -28,7 +31,7 @@ public class SetupMessage implements Serializable {
         ps = participants;
     }
 
-    public SetupMessage(int tuplesNumber, List<ActorRef> ps, int mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta, Ordering ordering) {
+    public SetupMessage(int tuplesNumber, List<ActorRef> ps, int mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta, Ordering ordering, int phi1, int phi2, boolean flow_control) {
         this.tuplesNumber = tuplesNumber;
         this.ps = ps;
         this.mtu = mtu;
@@ -38,6 +41,9 @@ public class SetupMessage implements Serializable {
         this.alpha = alpha;
         this.beta = beta;
         this.ordering = ordering;
+        this.phi1 = phi1;
+        this.phi2 = phi2;
+        this.flow_control = flow_control;
     }
 
     public int getTuplesNumber() {
@@ -74,5 +80,17 @@ public class SetupMessage implements Serializable {
 
     public Ordering getOrdering() {
         return ordering;
+    }
+
+    public int getPhi1() {
+        return phi1;
+    }
+
+    public int getPhi2() {
+        return phi2;
+    }
+
+    public boolean isFlow_control() {
+        return flow_control;
     }
 }

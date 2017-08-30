@@ -40,6 +40,9 @@ public class MainClass {
         Integer mtu = myConfig.getInt("aep.participants.mtu");
         Float alpha = (float)myConfig.getDouble("aep.flowcontrol.alpha");
         Float beta = (float)myConfig.getDouble("aep.flowcontrol.beta");
+        Integer phi1 = myConfig.getInt("aep.flowcontrol.phi1");
+        Integer phi2 = myConfig.getInt("aep.flowcontrol.phi2");
+        Boolean flow_control = false;
 
         List<Integer> timesteps = myConfig.getIntList("aep.execution.timesteps");
         List<Integer> updaterates = myConfig.getIntList("aep.execution.updaterates");
@@ -70,9 +73,11 @@ public class MainClass {
                 break;
             case "PreciseParticipantFC":
                 myClass = PreciseParticipantFC.class;
+                flow_control = true;
                 break;
             case "ScuttlebuttParticipantFC":
-//                myClass = ScuttlebuttParticipantFC.class;
+//              myClass = ScuttlebuttParticipantFC.class;
+                flow_control = true;
                 break;
         }
 
@@ -103,7 +108,7 @@ public class MainClass {
 
         for (int i = 0; i < ps.size(); i++) {
             participantName = "Participant_" + i;
-            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName, timesteps, updaterates, alpha, beta, method), null);
+            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName, timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control), null);
         }
 
     }

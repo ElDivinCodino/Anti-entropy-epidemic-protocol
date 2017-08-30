@@ -25,8 +25,12 @@ public class Participant extends UntypedActor{
     protected int tuplesNumber;
     protected int id;
 
-    protected int updateRate = 1;
+    protected float updateRate = 1;
+    // used in FC classes
+    protected float desiredUR;
     protected int gossipRate = 1;  // one gossip message per second
+
+    protected boolean flow_control;
 
     // experiment parameters
     int current_timestep;
@@ -49,6 +53,7 @@ public class Participant extends UntypedActor{
         this. storage = new Storage(message.getStoragePath(), ps.size(), tuplesNumber, id, logger);
         this.timesteps = message.getTimesteps();
         this.updaterates = message.getUpdaterates();
+        this.flow_control = message.isFlow_control();
         assert timesteps.size() == updaterates.size();
 
         // get the first update rate
@@ -62,7 +67,7 @@ public class Participant extends UntypedActor{
 
         scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
         if (this.updateRate != 0)
-            scheduleUpdateTimeout(updateRate, TimeUnit.MILLISECONDS);
+            scheduleUpdateTimeout(Math.round(1000/updateRate), TimeUnit.MILLISECONDS);
     }
 
     protected void increaseTimeStep(){
@@ -76,10 +81,13 @@ public class Participant extends UntypedActor{
         }
         // if there is a change in the update rate
         if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
-            if (this.updaterates.get(this.current_timestep_index) == 0){
-                this.updateRate = 0;
+            if (flow_control){
+                this.desiredUR = this.updaterates.get(this.current_timestep_index);
+                if (this.desiredUR == 0){
+                    this.updateRate = 0;
+                }
             }else{
-                this.updateRate = Math.round(1000 / this.updaterates.get(this.current_timestep_index));
+                this.updateRate = this.updaterates.get(this.current_timestep_index);
             }
 
             logger.debug("Update rate changed to " + this.updateRate + " for p " + this.id);
@@ -140,7 +148,7 @@ public class Participant extends UntypedActor{
         storage.update(keyToBeUpdated, newValue);
 
         if (this.updateRate != 0)
-            scheduleUpdateTimeout(this.updateRate, TimeUnit.MILLISECONDS);
+            scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);
     }
 
     protected void test(Object message){

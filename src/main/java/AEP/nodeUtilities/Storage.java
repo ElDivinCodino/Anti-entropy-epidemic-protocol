@@ -40,7 +40,7 @@ public class Storage {
         for(int i = 0; i < n; i++) {
             for(int j = 0; j < p; j++) {
                 if (i == id) {
-                    tmp = new Delta(i, j, Utilities.getRandomNum(0, 1000).toString(), System.currentTimeMillis());
+                    tmp = new Delta(i, j, Utilities.getRandomNum(0, 1000).toString(), Utilities.getRandomNum(0, 1000000));
                 } else {
                     tmp = new Delta(i, j, null, 0);
                 }
@@ -249,17 +249,19 @@ public class Storage {
                 int maxv = -1; // number of deltas of maximum process
                 long maxp = 0;  // key of the maximum process
 
+                // get the participant with maximum number of deltas
                 for(Long i : numberOfDeltas.keySet()) {
-                    if (numberOfDeltas.get(i).size() > maxv || (numberOfDeltas.get(i).size() == maxv && randomOrder == 0)) { // For participants with the same number of available deltas, random ordering among participants is used to remove bias
+                    // For participants with the same number of available deltas,
+                    // random ordering among participants is used to remove bias
+                    if (numberOfDeltas.get(i).size() > maxv || (numberOfDeltas.get(i).size() == maxv && randomOrder == 0)) {
                         maxv = numberOfDeltas.get(i).size();
                         maxp = i;
                     }
                 }
-
+                // get all deltas of maxP process
                 for(int i = mtuArrayList.size(); i < mtuSize && i < numberOfDeltas.get(maxp).size(); i++) {
                     mtuArrayList.add(numberOfDeltas.get(maxp).get(i));
                 }
-
                 numberOfDeltas.remove(maxp);
             }
         }

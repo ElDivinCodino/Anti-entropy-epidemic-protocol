@@ -13,9 +13,6 @@ import java.util.Comparator;
  */
 public class PreciseParticipantFC extends PreciseParticipant{
 
-    private float desiredUR;
-    private float maximumUR;
-
     // local adaptation variables
     private int phiBiggerMax;
     private int phiSmallerMax;
@@ -33,6 +30,10 @@ public class PreciseParticipantFC extends PreciseParticipant{
         super.initValues(message);
         this.alpha = message.getAlpha();
         this.beta = message.getBeta();
+        this.phiBiggerMax = message.getPhi1();
+        this.phiSmallerMax = message.getPhi2();
+
+        this.desiredUR = this.updaterates.get(0);
     }
 
     protected void startGossip(StartGossip message){
@@ -42,7 +43,7 @@ public class PreciseParticipantFC extends PreciseParticipant{
         getSender().tell(new GossipMessage(false,
                 storage.mtuResizeAndSort(toBeUpdated, mtu, new PreciseComparator(), this.method),
                 this.desiredUR,
-                this.maximumUR), null);
+                this.updateRate), null);
         // send to p the second message containing the digest (NOTE: in the paper it should be just the outdated entries that q requests to p)
         getSender().tell(new GossipMessage(false, storage.createDigest()), self());
         logger.info("Second phase: sending differences + digest to " + getSender());
@@ -55,24 +56,32 @@ public class PreciseParticipantFC extends PreciseParticipant{
 
             // here we calculate the new flow control parameters updating the local maximum update rate
             // the sender update rate gets included in the gossip message to q
-            float senderMaximumUR = computeUpdateRate(message.getMaximumUR(), message.getDesiredUR());
+            float senderupdateRate;
+            if (this.desiredUR == 0){
+                // TODO: check this
+                senderupdateRate = 0;
+            }else {
+                senderupdateRate = computeUpdateRate(message.getMaximumUR(), message.getDesiredUR());
+            }
 
             // answer with the updates p has to do. Sender set to null because we do not need to answer to this message
             ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
 
-            localAdaptation(toBeUpdated.size());
+            if (this.desiredUR != 0){
+                localAdaptation(toBeUpdated.size());
+            }
 
             getSender().tell(new GossipMessage(false,
                     storage.mtuResizeAndSort(toBeUpdated, mtu , new PreciseComparator(), this.method),
                     0,
-                    senderMaximumUR), null);
+                    senderupdateRate), null);
 
             logger.info("Fourth phase: sending differences to " + getSender());
         } else {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
                 // get the new maximum update rate computed at node p
-                this.maximumUR = message.getMaximumUR();
+                this.updateRate = message.getMaximumUR();
                 // update local states with deltas sent by p
                 storage.reconciliation(message.getParticipantStates());
                 logger.info("Gossip completed");
@@ -80,40 +89,42 @@ public class PreciseParticipantFC extends PreciseParticipant{
                 // send to q last message of exchange with deltas.
                 ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
 
-                localAdaptation(toBeUpdated.size());
+                if (this.desiredUR != 0){
+                    localAdaptation(toBeUpdated.size());
+                }
 
                 getSender().tell(new GossipMessage(true,
                         storage.mtuResizeAndSort(toBeUpdated, mtu, new PreciseComparator(), this.method),
                         this.desiredUR,
-                        this.maximumUR), self());
+                        this.updateRate), self());
                 logger.info("Third phase: sending differences to " + getSender());
             }
         }
     }
 
-    private float computeUpdateRate(float senderMaximumUR, float senderDesiredUR){
-        float oldMax1 = this.maximumUR;
-        float oldMax2 = senderMaximumUR;
-        float maxRateAvg = (this.maximumUR + senderMaximumUR) / 2;
-        if (this.desiredUR + senderDesiredUR <= this.maximumUR + senderMaximumUR){
-            float delta = this.desiredUR + senderDesiredUR - this.maximumUR - senderMaximumUR;
-            this.maximumUR = this.desiredUR + delta / 2;
-            senderMaximumUR = senderDesiredUR + delta / 2;
-        }else {  // this.desiredUR + senderDesiredUR > this.maximumUR + senderMaximumUR
+    private float computeUpdateRate(float senderupdateRate, float senderDesiredUR){
+        float oldMax1 = this.updateRate;
+        float oldMax2 = senderupdateRate;
+        float maxRateAvg = (this.updateRate + senderupdateRate) / 2;
+        if (this.desiredUR + senderDesiredUR <= this.updateRate + senderupdateRate){
+            float delta = this.desiredUR + senderDesiredUR - this.updateRate - senderupdateRate;
+            this.updateRate = this.desiredUR + delta / 2;
+            senderupdateRate = senderDesiredUR + delta / 2;
+        }else {  // this.desiredUR + senderDesiredUR > this.updateRate + senderupdateRate
             if (this.desiredUR >= maxRateAvg && senderDesiredUR >= maxRateAvg){
                 // the participants both get the same value
-                this.maximumUR = senderMaximumUR = maxRateAvg;
+                this.updateRate = senderupdateRate = maxRateAvg;
             }else if (this.desiredUR < maxRateAvg){
-                this.maximumUR = this.desiredUR;
-                senderMaximumUR = this.maximumUR + senderMaximumUR - this.desiredUR;
+                this.updateRate = this.desiredUR;
+                senderupdateRate = this.updateRate + senderupdateRate - this.desiredUR;
             }else{ // senderDesiredUR < maxRateAvg
-                senderMaximumUR = senderDesiredUR;
-                this.maximumUR = this.maximumUR + senderMaximumUR - senderDesiredUR;
+                senderupdateRate = senderDesiredUR;
+                this.updateRate = this.updateRate + senderupdateRate - senderDesiredUR;
             }
         }
         // this invariant must hold between updates
-        assert oldMax1 + oldMax2 == this.maximumUR + senderMaximumUR;
-        return senderMaximumUR;
+        assert oldMax1 + oldMax2 == this.updateRate + senderupdateRate;
+        return senderupdateRate;
     }
 
     private void localAdaptation(int messageSize){
@@ -128,10 +139,10 @@ public class PreciseParticipantFC extends PreciseParticipant{
 
         // check if a counter has surpassed the threshold
         if (this.phiBiggerCounter >= this.phiBiggerMax){
-            this.maximumUR = this.alpha * this.maximumUR;
+            this.updateRate = this.alpha * this.updateRate;
         }
         if (this.phiSmallerCounter >= this.phiSmallerMax){
-            this.maximumUR = Math.min(this.maximumUR + this.beta, mtu);
+            this.updateRate = Math.min(this.updateRate + this.beta, mtu);
         }
     }
 
