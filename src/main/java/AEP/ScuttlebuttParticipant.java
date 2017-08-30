@@ -27,7 +27,6 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
 
     protected void initValues(SetupMessage message){
         super.initValues(message);
-        method = Ordering.SCUTTLEDEPTH;
     }
 
     protected void timeoutMessage(TimeoutMessage message){

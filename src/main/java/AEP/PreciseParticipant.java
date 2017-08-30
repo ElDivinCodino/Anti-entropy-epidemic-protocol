@@ -22,11 +22,11 @@ public class PreciseParticipant extends Participant {
 
     public PreciseParticipant(int id) {
         super(id);
-        this.method = Ordering.OLDEST;
     }
 
     protected void initValues(SetupMessage message){
         this.mtu = message.getMtu();
+        this.method = message.getOrdering();
         super.initValues(message);
     }
 

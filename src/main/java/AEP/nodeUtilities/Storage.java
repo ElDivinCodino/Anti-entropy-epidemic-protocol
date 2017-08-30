@@ -172,7 +172,6 @@ public class Storage {
      */
     public ArrayList<Delta> computeScuttlebuttDifferences(ArrayList<Delta> digest) {
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
-        logger.debug("computeScuttlebuttDifferences digest is " + digest.toString());
         for (int i = 0; i < digest.size(); i++){
             for (int index = i * tuplesNumber; index < tuplesNumber * (i + 1); index++) {
                 if (digest.get(i).getP() == participantStates.get(index).getP() &&
@@ -187,7 +186,6 @@ public class Storage {
                 }
             }
         }
-        logger.debug("to be updated is " + toBeUpdated.toString());
         return toBeUpdated;
     }
 

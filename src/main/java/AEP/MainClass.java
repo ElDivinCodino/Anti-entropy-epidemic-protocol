@@ -12,6 +12,8 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import AEP.PreciseParticipant.Ordering;
+
 /**
  * This class is useful to both setup the network and design the operations performed by the participants
  */
@@ -30,6 +32,8 @@ public class MainClass {
         String localIP = null;
         String participantName;
         Config myConfig = ConfigFactory.load("application");
+        String mainClass = myConfig.getString("aep.experiment.class");
+        String orderingMethod = myConfig.getString("aep.experiment.ordering");
         String destinationPath = myConfig.getString("aep.storage.location");
         Integer participants = myConfig.getInt("aep.participants.p");
         Integer deltas = myConfig.getInt("aep.participants.keys");
@@ -53,16 +57,53 @@ public class MainClass {
 
         ActorSystem system = ActorSystem.create("AEP", custom.withFallback(myConfig));
 
+        Class myClass = null;
+        switch (mainClass) {
+            case "Participant":
+                myClass = Participant.class;
+                break;
+            case "PreciseParticipant":
+                myClass = PreciseParticipant.class;
+                break;
+            case "ScuttlebuttParticipant":
+                myClass = ScuttlebuttParticipant.class;
+                break;
+            case "PreciseParticipantFC":
+                myClass = PreciseParticipantFC.class;
+                break;
+            case "ScuttlebuttParticipantFC":
+//                myClass = ScuttlebuttParticipantFC.class;
+                break;
+        }
+
         // Set up all the participants
         for (int i = 0; i < participants; i++) {
             participantName = "Participant_" + i;
-            ActorRef node = system.actorOf(Props.create(PreciseParticipant.class, i), participantName);
+
+            ActorRef node = system.actorOf(Props.create(myClass, i), participantName);
             ps.add(node);
+        }
+
+        Ordering method = null;
+
+        switch (orderingMethod) {
+            case "Oldest":
+                method = Ordering.OLDEST;
+                break;
+            case "Newest":
+                method = Ordering.NEWEST;
+                break;
+            case "ScuttleBreadth":
+                method = Ordering.SCUTTLEBREADTH;
+                break;
+            case "ScuttleDepth":
+                method = Ordering.SCUTTLEDEPTH;
+                break;
         }
 
         for (int i = 0; i < ps.size(); i++) {
             participantName = "Participant_" + i;
-            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName, timesteps, updaterates, alpha, beta), null);
+            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName, timesteps, updaterates, alpha, beta, method), null);
         }
 
     }

@@ -61,7 +61,8 @@ public class Participant extends UntypedActor{
         logger.info("Setup completed for node " + id);
 
         scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
-        scheduleUpdateTimeout(updateRate, TimeUnit.MILLISECONDS);
+        if (this.updateRate != 0)
+            scheduleUpdateTimeout(updateRate, TimeUnit.MILLISECONDS);
     }
 
     protected void increaseTimeStep(){
@@ -75,7 +76,12 @@ public class Participant extends UntypedActor{
         }
         // if there is a change in the update rate
         if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
-            this.updateRate = Math.round(1000 / this.updaterates.get(this.current_timestep_index));
+            if (this.updaterates.get(this.current_timestep_index) == 0){
+                this.updateRate = 0;
+            }else{
+                this.updateRate = Math.round(1000 / this.updaterates.get(this.current_timestep_index));
+            }
+
             logger.debug("Update rate changed to " + this.updateRate + " for p " + this.id);
             this.current_timestep_index++;
         }
@@ -131,7 +137,8 @@ public class Participant extends UntypedActor{
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);
         storage.update(keyToBeUpdated, newValue);
 
-        scheduleUpdateTimeout(this.updateRate, TimeUnit.MILLISECONDS);
+        if (this.updateRate != 0)
+            scheduleUpdateTimeout(this.updateRate, TimeUnit.MILLISECONDS);
     }
 
     protected void test(Object message){

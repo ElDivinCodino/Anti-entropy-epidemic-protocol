@@ -1,5 +1,7 @@
 package AEP.messages;
 
+import AEP.PreciseParticipant;
+import AEP.PreciseParticipant.Ordering;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
@@ -18,6 +20,7 @@ public class SetupMessage implements Serializable {
     private List<Integer> updaterates;
     private float alpha;
     private float beta;
+    private Ordering ordering;
 
 
     public SetupMessage(int tuplesNumber, List participants) {
@@ -25,7 +28,7 @@ public class SetupMessage implements Serializable {
         ps = participants;
     }
 
-    public SetupMessage(int tuplesNumber, List<ActorRef> ps, int mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta) {
+    public SetupMessage(int tuplesNumber, List<ActorRef> ps, int mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta, Ordering ordering) {
         this.tuplesNumber = tuplesNumber;
         this.ps = ps;
         this.mtu = mtu;
@@ -34,6 +37,7 @@ public class SetupMessage implements Serializable {
         this.updaterates = updaterates;
         this.alpha = alpha;
         this.beta = beta;
+        this.ordering = ordering;
     }
 
     public int getTuplesNumber() {
@@ -66,5 +70,9 @@ public class SetupMessage implements Serializable {
 
     public float getBeta() {
         return beta;
+    }
+
+    public Ordering getOrdering() {
+        return ordering;
     }
 }
