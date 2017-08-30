@@ -194,20 +194,19 @@ public class Storage {
 
     private TreeMap<Long, ArrayList<Delta>> statesToTreeMap(ArrayList<Delta> states){
         // represents how many deltas are available for each process.
-        // Key is the process id, value is the number of deltas
-        TreeMap<Long, ArrayList<Delta>> numberOfDeltas = new TreeMap<>();
+        TreeMap<Long, ArrayList<Delta>> mapDeltas = new TreeMap<>();
         for (Delta d: states) {
             long p = d.getP();
 
-            if (numberOfDeltas.containsKey(p)) {
-                numberOfDeltas.get(p).add(d);
+            if (mapDeltas.containsKey(p)) {
+                mapDeltas.get(p).add(d);
             } else {
                 ArrayList<Delta> newArray = new ArrayList<>();
                 newArray.add(d);
-                numberOfDeltas.put(p, newArray);
+                mapDeltas.put(p, newArray);
             }
         }
-        return numberOfDeltas;
+        return mapDeltas;
     }
 
     public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Comparator comparator, Ordering method) {
@@ -225,44 +224,58 @@ public class Storage {
             mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size()));
             Collections.reverse(mtuArrayList);
         } else if (method == Ordering.SCUTTLEBREADTH) {
-            TreeMap<Long, ArrayList<Delta>> numberOfDeltas = statesToTreeMap(state);
-            ArrayList<Long> randomP = new ArrayList<>(numberOfDeltas.keySet());
+            TreeMap<Long, ArrayList<Delta>> mapDeltas = statesToTreeMap(state);
+            ArrayList<Long> randomP = new ArrayList<>(mapDeltas.keySet());
             Collections.shuffle(randomP);
             int filled = 0;
             while (filled < mtuSize){
                 for (Long i : randomP){
                     if (filled == mtuSize)
                         break;
-                    if (numberOfDeltas.get(i).size() > 0) {
-                        mtuArrayList.add(numberOfDeltas.get(i).get(0));
-                        numberOfDeltas.get(i).remove(0);
+                    if (mapDeltas.get(i).size() > 0) {
+                        mtuArrayList.add(mapDeltas.get(i).get(0));
+                        mapDeltas.get(i).remove(0);
                         filled++;
                     }
                 }
             }
         } else if (method == Ordering.SCUTTLEDEPTH) {
             int randomOrder = Utilities.getRandomNum(0, 1);
-            TreeMap<Long, ArrayList<Delta>> numberOfDeltas = statesToTreeMap(state);
+            TreeMap<Long, ArrayList<Delta>> mapDeltas = statesToTreeMap(state);
 
-            // while loop to decide which delta's to insert
-            while (mtuArrayList.size() < mtuSize && numberOfDeltas.size() > 0) {
-                int maxv = -1; // number of deltas of maximum process
-                long maxp = 0;  // key of the maximum process
+            long[] process = new long[mapDeltas.size()];  // keys of the processes
+            int[] deltasNum = new int[mapDeltas.size()]; // number of deltas of the processes
 
-                // get the participant with maximum number of deltas
-                for(Long i : numberOfDeltas.keySet()) {
+            int j = -1;
+            // get the participants with their number of deltas
+            for(Long i : mapDeltas.keySet()) {
+
+                j++;
+                process[j] = i;
+                deltasNum[j] = mapDeltas.get(i).size();
+            }
+
+            // while loop to decide which deltas to insert
+            while (mtuArrayList.size() < mtuSize) {
+                long currentMaxProcess = -1;
+                int currentMaxDelta = -1;
+                int index = -1;
+
+                for (int t = 0; t < deltasNum.length; t++) {
                     // For participants with the same number of available deltas,
                     // random ordering among participants is used to remove bias
-                    if (numberOfDeltas.get(i).size() > maxv || (numberOfDeltas.get(i).size() == maxv && randomOrder == 0)) {
-                        maxv = numberOfDeltas.get(i).size();
-                        maxp = i;
+                    if (deltasNum[t] > currentMaxDelta || (deltasNum[t] == currentMaxDelta && randomOrder == 0)) {
+                        currentMaxDelta = deltasNum[t];
+                        currentMaxProcess = process[t];
+                        index = t;
                     }
                 }
-                // get all deltas of maxP process
-                for(int i = mtuArrayList.size(); i < mtuSize && i < numberOfDeltas.get(maxp).size(); i++) {
-                    mtuArrayList.add(numberOfDeltas.get(maxp).get(i));
+                while (currentMaxDelta > 0 && mtuArrayList.size() < mtuSize) {
+                    mtuArrayList.add(mapDeltas.get(currentMaxProcess).get(0));
+                    mapDeltas.get(currentMaxProcess).remove(0);
+                    currentMaxDelta--;
+                    deltasNum[index]--;
                 }
-                numberOfDeltas.remove(maxp);
             }
         }
         return mtuArrayList;
