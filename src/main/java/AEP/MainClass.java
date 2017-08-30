@@ -96,6 +96,9 @@ public class MainClass {
                 break;
         }
 
+        ActorRef observer = system.actorOf(Props.create(TheObserver.class), "Observer");
+
+        ps.add(observer);
         // Set up all the participants
         for (int i = 0; i < participants; i++) {
             participantName = "Participant_" + i;

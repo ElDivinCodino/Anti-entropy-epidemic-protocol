@@ -2,6 +2,7 @@ package AEP;
 
 import AEP.messages.*;
 import AEP.nodeUtilities.*;
+import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import scala.concurrent.duration.Duration;
@@ -14,6 +15,8 @@ import java.util.concurrent.TimeUnit;
  * Created by Francesco on 24/08/17.
  */
 public class Participant extends UntypedActor{
+
+    protected ActorRef observer;
 
     // custom logger to display useful stuff to console
     protected CustomLogger logger;
@@ -49,6 +52,8 @@ public class Participant extends UntypedActor{
 
     protected void initValues(SetupMessage message){
         this.tuplesNumber = message.getTuplesNumber();
+        this.observer = message.getPs().get(0);
+        message.getPs().remove(0);
         this.ps = message.getPs();
         this. storage = new Storage(message.getStoragePath(), ps.size(), tuplesNumber, id, logger);
         this.timesteps = message.getTimesteps();
@@ -145,7 +150,10 @@ public class Participant extends UntypedActor{
     private void update() {
         String newValue = Utilities.getRandomNum(0, 1000).toString();
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);
-        storage.update(keyToBeUpdated, newValue);
+        Delta update = storage.update(keyToBeUpdated, newValue);
+
+        // send update to Observer
+        observer.tell(new ObserverUpdate(this.id, this.current_timestep, update, true), getSelf());
 
         if (this.updateRate != 0)
             scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);

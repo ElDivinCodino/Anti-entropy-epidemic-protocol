@@ -52,7 +52,7 @@ public class Storage {
     }
 
 
-    public void update(int key, String value) {
+    public Delta update(int key, String value) {
         Delta deltaToBeUpdated = participantStates.get((id * tuplesNumber) + key);
         deltaToBeUpdated.setV(value);
         deltaToBeUpdated.setN(System.currentTimeMillis());
@@ -60,6 +60,7 @@ public class Storage {
         logger.debug("P " + id + " updated key " + key + " with v: " + value + " t: " + deltaToBeUpdated.getN());
 
         save();
+        return deltaToBeUpdated;
     }
 
     /**
