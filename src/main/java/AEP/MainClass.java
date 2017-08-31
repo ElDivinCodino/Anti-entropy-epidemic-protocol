@@ -38,7 +38,6 @@ public class MainClass {
         String destinationPath = myConfig.getString("aep.storage.location");
         Integer participants = myConfig.getInt("aep.participants.p");
         Integer deltas = myConfig.getInt("aep.participants.keys");
-        Integer mtu = myConfig.getInt("aep.participants.mtu");
         Float alpha = (float)myConfig.getDouble("aep.flowcontrol.alpha");
         Float beta = (float)myConfig.getDouble("aep.flowcontrol.beta");
         Integer phi1 = myConfig.getInt("aep.flowcontrol.phi1");
@@ -61,6 +60,7 @@ public class MainClass {
 
         List<Integer> timesteps = myConfig.getIntList("aep.execution.timesteps");
         List<Integer> updaterates = myConfig.getIntList("aep.execution.updaterates");
+        List<Integer> mtu = myConfig.getIntList("aep.execution.mtu");
 
         try {
             localIP = InetAddress.getLocalHost().getHostAddress();

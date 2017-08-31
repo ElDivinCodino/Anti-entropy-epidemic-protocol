@@ -18,6 +18,7 @@ public class PreciseParticipant extends Participant {
 
     // Maximum Transfer Unit: maximum number of deltas inside a single gossip message
     protected int mtu;
+    private List<Integer> mtuArray;
 
     public enum Ordering { OLDEST, NEWEST, SCUTTLEBREADTH, SCUTTLEDEPTH};
     protected Ordering method;
@@ -27,9 +28,18 @@ public class PreciseParticipant extends Participant {
     }
 
     protected void initValues(SetupMessage message){
-        this.mtu = message.getMtu();
+        this.mtuArray = message.getMtu();
+        // get first value as starting MTU
+        this.mtu = mtuArray.get(0);
         this.method = message.getOrdering();
         super.initValues(message);
+    }
+
+    protected void changeMTU(){
+        if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
+            this.mtu = this.mtuArray.get(this.current_timestep_index);
+            System.out.println("MTU changed to " + this.mtu);
+        }
     }
 
     protected void startGossip(StartGossip message){

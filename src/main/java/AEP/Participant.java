@@ -94,11 +94,14 @@ public class Participant extends UntypedActor{
             }else{
                 this.updateRate = this.updaterates.get(this.current_timestep_index);
             }
+            changeMTU();
 
             logger.debug("Update rate changed to " + this.updateRate + " for p " + this.id);
             this.current_timestep_index++;
         }
     }
+
+    protected void changeMTU() {}
 
     protected void timeoutMessage(TimeoutMessage message){
         this.increaseTimeStep();

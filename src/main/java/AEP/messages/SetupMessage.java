@@ -14,7 +14,7 @@ public class SetupMessage implements Serializable {
 
     private int tuplesNumber;
     private List<ActorRef> ps;
-    private int mtu;
+    private List<Integer> mtu;
     private String storagePath;
     private List<Integer> timesteps;
     private List<Integer> updaterates;
@@ -32,7 +32,7 @@ public class SetupMessage implements Serializable {
         ps = participants;
     }
 
-    public SetupMessage(int tuplesNumber, List<ActorRef> ps, int mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta, Ordering ordering, int phi1, int phi2, boolean flow_control, ActorRef observer) {
+    public SetupMessage(int tuplesNumber, List<ActorRef> ps, List<Integer> mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta, Ordering ordering, int phi1, int phi2, boolean flow_control, ActorRef observer) {
         this.tuplesNumber = tuplesNumber;
         this.ps = ps;
         this.mtu = mtu;
@@ -56,7 +56,7 @@ public class SetupMessage implements Serializable {
         return ps;
     }
 
-    public int getMtu() {
+    public List<Integer> getMtu() {
         return mtu;
     }
 
