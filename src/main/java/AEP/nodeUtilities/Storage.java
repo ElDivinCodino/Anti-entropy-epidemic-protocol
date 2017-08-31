@@ -84,7 +84,7 @@ public class Storage {
 
         for (int i = 0; i < participantNumber; i++){
             long higherVersion = -1;
-            long key = -1;
+            int key = -1;
 
             for (int j = i * tuplesNumber; j < (1 + i) * tuplesNumber; j++ ) {
                 if (participantStates.get(j).getN() > higherVersion) {

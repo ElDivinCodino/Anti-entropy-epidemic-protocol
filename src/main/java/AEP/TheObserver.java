@@ -7,6 +7,8 @@ import AEP.nodeUtilities.Delta;
 import akka.actor.UntypedActor;
 import scala.concurrent.duration.Duration;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -19,75 +21,101 @@ public class TheObserver extends UntypedActor {
     private int tuplesNumber;
     private int participantNumber;
     private int timesteps;
-    private int deletingTime = 5; // how often (in seconds) prune the branches of previous timesteps
+    private String pathname;
 
-    // one tree map per time step
-    TreeMap<Integer, TreeMap<Long, TreeMap<Long, ArrayList<Delta>>>> observed;
+    // entire distributed replicated state
+    private TreeMap<Integer, TreeMap<Integer, ArrayList<Delta>>> observed;
 
     // these array lists are #timesteps long
-    ArrayList<Long> maxStale;
+    private long[] maxStale;
+    private int[] numStale;
+    // for each process we track the last time step when the process was not stale
+    private int[] lastStale;
 
     private void initializeObserved(SetupMessage message) {
         this.tuplesNumber = message.getTuplesNumber();
         this.participantNumber = message.getPs().size();
-        this.timesteps = message.getTimesteps().size();
+        this.timesteps = message.getTimesteps().get(message.getTimesteps().size()-1);
+        this.pathname = message.getStoragePath();
+        this.maxStale = new long[timesteps];
+        this.numStale = new int[timesteps];
+        this.lastStale = new int[participantNumber];
 
-        for(int i = 0; i < timesteps; i++) {    // add all timesteps
-            for(int j = 0; j < participantNumber; j++) {    // add all participants
-                for(long k = 0; k < participantNumber; k++) {   // add all the states of each participant
-                    ArrayList<Delta> list = new ArrayList<>();
+        this.observed = new TreeMap<>();
+        for(int j = 0; j < participantNumber; j++) {    // add all participants
+            TreeMap<Integer, ArrayList<Delta>> pLocalState = new TreeMap<>();
+            for(int k = 0; k < participantNumber; k++) {   // add all the states of each participant
+                ArrayList<Delta> list = new ArrayList<>();
 
-                    for (int z = 0; z < tuplesNumber; z++) {
-                        list.add(new Delta(k, z, null, -1));
-                    }
-
-                    observed.get(i).get(j).put(k, list);    // add all the deltas of each state
+                for (int z = 0; z < tuplesNumber; z++) {
+                    list.add(new Delta(k, z, null, System.currentTimeMillis()));
                 }
+                pLocalState.put(k, list);
             }
+            this.observed.put(j, pLocalState);
         }
-
-        scheduleTimeout(deletingTime, TimeUnit.SECONDS);
     }
 
-    private void localUpdate(Integer id, Delta d, Integer ts){
-        observed.get(ts).get(id).get(id).set((int)d.getK(), d);
+    private void localUpdate(Integer id, Delta d){
+        observed.get(id).get(id).set(d.getK(), d);
     }
 
     private void observedUpdate(Integer id, ArrayList<Delta> updates, Integer ts){
         for(Delta d : updates) {
-            if (d.getN() == observed.get(ts).get(d.getP()).get(d.getP()).get((int)d.getK()).getN()) {
+            if (d.getN() == observed.get(d.getP()).get(d.getP()).get(d.getK()).getN()) {
                 // it means that I reached the last update done locally by d.getP()
-                long staleness = d.getN() - observed.get(ts).get(id).get(d.getP()).get((int)d.getK()).getN();
-                observed.get(ts).get(id).get(d.getP()).set((int)d.getK(), d);
+                long staleness = d.getN() - observed.get(id).get(d.getP()).get(d.getK()).getN();
+                observed.get(id).get(d.getP()).set(d.getK(), d);
 
-                if (staleness > maxStale.get(ts))
-                    maxStale.set(ts, staleness);
+                for (int i = lastStale[id]; i < ts; i++) {
+                    numStale[i]++;
+                }
+                lastStale[id] = ts;
+
+                if (staleness > maxStale[ts])
+                    maxStale[ts] = staleness;
             } else {
                 // it means that I received an update that is not the last one, so the staleness continues:
                 // I'm not interested in updating anything
             }
         }
+        save();
     }
 
     private void update(ObserverUpdate message){
         if (message.isLocal()) {
-            localUpdate(message.getId(), message.getDelta(), message.getTimestep());
+            localUpdate(message.getId(), message.getDelta());
         } else {
             observedUpdate(message.getId(), message.getUpdates(), message.getTimestep());
         }
 
     }
 
-    private void timeoutMessage(TimeoutMessage message) {
-        pruneBranches();
-        scheduleTimeout(deletingTime, TimeUnit.SECONDS);
+    private String arrayString(){
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < maxStale.length; i++) {
+            sb.append(maxStale[i]).append(" ");
+        }
+        sb.append("\n");
+        for (int i = 0; i < numStale.length; i++) {
+            sb.append(numStale[i]).append(" ");
+        }
+        return sb.toString();
     }
 
-    // TODO: A little bit empirical
-    private void pruneBranches() {
-        observed.remove(0);
-        observed.remove(1);
+    private void save(){
+        try {
+            FileWriter out = new FileWriter(pathname);
+            out.write(arrayString());
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+
+//    public String toString(){
+//
+//    }
 
     @Override
     public void onReceive(Object message) throws Exception {
@@ -101,22 +129,6 @@ public class TheObserver extends UntypedActor {
             case "ObserverUpdate": // initialization message
                 update((ObserverUpdate) message);
                 break;
-            case "TimeoutMessage":
-                timeoutMessage((TimeoutMessage) message);
-                break;
         }
-    }
-
-    /**
-     * This method implements a scheduler that triggers a message every certain time
-     * @param time quantity of time chosen
-     * @param unit time unit measurement chosen
-     */
-    protected void scheduleTimeout(Integer time, TimeUnit unit) {
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(time, unit),
-                getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
-        //logger.info("scheduleTimeout: scheduled timeout in {} {}",
-          //      time, unit.toString());
     }
 }

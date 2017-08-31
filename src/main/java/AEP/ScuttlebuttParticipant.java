@@ -1,9 +1,6 @@
 package AEP;
 
-import AEP.messages.GossipMessage;
-import AEP.messages.SetupMessage;
-import AEP.messages.StartGossip;
-import AEP.messages.TimeoutMessage;
+import AEP.messages.*;
 import AEP.nodeUtilities.CustomLogger;
 import AEP.nodeUtilities.Delta;
 import AEP.nodeUtilities.Utilities;
@@ -63,6 +60,7 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
             logger.info("Fourth phase: reconciling and sending differences to " + getSender());
 
             storage.reconciliation(message.getParticipantStates());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
 
             // answer with the updates p has to do, calculated from the temporary digest stored in the TreeMap.
             ArrayList<Delta> toBeUpdated = storage.computeScuttlebuttDifferences(storedDigests.get(getSender()));
@@ -73,6 +71,8 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
                 storage.reconciliation(message.getParticipantStates());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+
                 logger.info("Reconciliation... Gossip completed");
             } else { // digest message to respond to
                 logger.info("Third phase: sending differences to " + getSender());
@@ -92,7 +92,7 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
 
         @Override
         public int compare(Delta o1, Delta o2) {
-            c =((Long)o1.getP()).compareTo(o2.getP());
+            c =((Integer)o1.getP()).compareTo(o2.getP());
 
             if(c == 0)
                 c = (((Long)o1.getN()).compareTo(o2.getN()));

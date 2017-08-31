@@ -1,6 +1,7 @@
 package AEP;
 
 import AEP.messages.GossipMessage;
+import AEP.messages.ObserverUpdate;
 import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
 import AEP.nodeUtilities.CustomLogger;
@@ -54,6 +55,7 @@ public class PreciseParticipantFC extends PreciseParticipant{
         // p sent to q the updates
         if (message.isSender()) {
             storage.reconciliation(message.getParticipantStates());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
 
             // here we calculate the new flow control parameters updating the local maximum update rate
             // the sender update rate gets included in the gossip message to q
@@ -85,6 +87,8 @@ public class PreciseParticipantFC extends PreciseParticipant{
                 this.updateRate = message.getMaximumUR();
                 // update local states with deltas sent by p
                 storage.reconciliation(message.getParticipantStates());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+
                 logger.info("Gossip completed");
             } else { // digest message to respond to
                 // send to q last message of exchange with deltas.

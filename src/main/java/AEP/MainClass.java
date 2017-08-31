@@ -98,7 +98,6 @@ public class MainClass {
 
         ActorRef observer = system.actorOf(Props.create(TheObserver.class), "Observer");
 
-        ps.add(observer);
         // Set up all the participants
         for (int i = 0; i < participants; i++) {
             participantName = "Participant_" + i;
@@ -124,9 +123,11 @@ public class MainClass {
                 break;
         }
 
+        // send first setup message to observer
+        observer.tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + "observer.txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, null), null);
         for (int i = 0; i < ps.size(); i++) {
             participantName = "Participant_" + i;
-            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName, timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control), null);
+            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName + ".txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, observer), null);
         }
 
     }

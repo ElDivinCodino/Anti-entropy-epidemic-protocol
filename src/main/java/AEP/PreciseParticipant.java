@@ -1,6 +1,7 @@
 package AEP;
 
 import AEP.messages.GossipMessage;
+import AEP.messages.ObserverUpdate;
 import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
 import AEP.nodeUtilities.CustomLogger;
@@ -44,6 +45,7 @@ public class PreciseParticipant extends Participant {
         // p sent to q the updates
         if (message.isSender()) {
             storage.reconciliation(message.getParticipantStates());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
 
             // answer with the updates p has to do. Sender set to null because we do not need to answer to this message
             ArrayList<Delta> toBeUpdated = storage.computeDifferences(message.getParticipantStates());
@@ -54,6 +56,8 @@ public class PreciseParticipant extends Participant {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
                 storage.reconciliation(message.getParticipantStates());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+
                 logger.info("Gossip completed");
             } else { // digest message to respond to
                 // send to q last message of exchange with deltas.

@@ -7,8 +7,8 @@ import java.io.Serializable;
  */
 public class Delta implements Serializable {
 
-    private long p;
-    private long k;
+    private int p;
+    private int k;
     private String v;
     private long n;
 
@@ -16,7 +16,7 @@ public class Delta implements Serializable {
      * @param value the v of the key
      * @param version last n of the key
      */
-    public Delta(long process, long key, String value, long version) {
+    public Delta(int process, int key, String value, long version) {
         this.v = value;
         this.n = version;
         this.p = process;
@@ -55,22 +55,13 @@ public class Delta implements Serializable {
         return n;
     }
 
-    public long getP() {
+    public int getP() {
         return p;
     }
 
-    public void setP(long p) {
-        this.p = p;
-    }
-
-    public long getK() {
+    public int getK() {
         return k;
     }
-
-    public void setK(long k) {
-        this.k = k;
-    }
-
 
     @Override
     public String toString() {

@@ -51,8 +51,7 @@ public class Participant extends UntypedActor{
 
     protected void initValues(SetupMessage message){
         this.tuplesNumber = message.getTuplesNumber();
-        this.observer = message.getPs().get(0);
-        message.getPs().remove(0);
+        this.observer = message.getObserver();
         this.ps = message.getPs();
         this. storage = new Storage(message.getStoragePath(), ps.size(), tuplesNumber, id, logger);
         this.timesteps = message.getTimesteps();
@@ -133,11 +132,13 @@ public class Participant extends UntypedActor{
     protected void gossipMessage(GossipMessage message){
         if (message.isSender()) {
             storage.reconciliation(message.getParticipantStates());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
             logger.info("Gossip exchange with node " + sender() + " completed");
         } else {
             // second phase, receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()){ // this is the message with deltas
                 storage.reconciliation(message.getParticipantStates());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
             }else{ // digest message to respond to
                 // send to q last message of exchange with deltas.
                 getSender().tell(new GossipMessage(true, storage.computeDifferences(message.getParticipantStates())), self());
