@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * Created by StefanoFiora on 28/08/2017.
  */
-public class Delta implements Serializable {
+public class Delta implements Serializable{
 
     private int p;
     private int k;
@@ -73,4 +73,13 @@ public class Delta implements Serializable {
                 '}';
     }
 
+    @Override
+    public boolean equals(Object o) {
+        Delta d = (Delta)o;
+        return ((Integer)this.getP()).equals(d.getP())
+                && ((Integer)this.getK()).equals(d.getK())
+                && (this.getV()).equals(d.getV())
+                && ((Long)this.getN()).equals(d.getN());
+
+    }
 }

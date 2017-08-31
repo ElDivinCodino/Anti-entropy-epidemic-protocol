@@ -55,6 +55,8 @@ public class Participant extends UntypedActor{
         this.ps = message.getPs();
         this. storage = new Storage(message.getStoragePath(), ps.size(), tuplesNumber, id, logger);
         this.timesteps = message.getTimesteps();
+        // give the observer time to compute history and save results. ¯\_(ツ)_/¯
+        this.timesteps.set(this.timesteps.size()-1, this.timesteps.get(this.timesteps.size()-1) + 5);
         this.updaterates = message.getUpdaterates();
         this.flow_control = message.isFlow_control();
         assert timesteps.size() == updaterates.size();
@@ -80,7 +82,7 @@ public class Participant extends UntypedActor{
         // if this is the last timestep, stop the experiment
         if (this.current_timestep == this.timesteps.get(this.timesteps.size()-1)){
             logger.info("End of experiment for Participant " + this.id);
-            context().system().terminate();
+//            context().system().terminate();
         }
         // if there is a change in the update rate
         if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){

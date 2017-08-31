@@ -4,6 +4,7 @@ import AEP.messages.ObserverUpdate;
 import AEP.messages.SetupMessage;
 import AEP.messages.TimeoutMessage;
 import AEP.nodeUtilities.Delta;
+import AEP.nodeUtilities.Utilities;
 import akka.actor.UntypedActor;
 import scala.concurrent.duration.Duration;
 
@@ -21,25 +22,28 @@ public class TheObserver extends UntypedActor {
     private int tuplesNumber;
     private int participantNumber;
     private int timesteps;
+    private int finalTimestep;
     private String pathname;
+    private int historyProcess;
 
     // entire distributed replicated state
     private TreeMap<Integer, TreeMap<Integer, ArrayList<Delta>>> observed;
 
+    private ArrayList<ArrayList<ArrayList<Delta>>> history;
+
     // these array lists are #timesteps long
     private long[] maxStale;
     private int[] numStale;
-    // for each process we track the last time step when the process was not stale
-    private int[] lastStale;
 
     private void initializeObserved(SetupMessage message) {
         this.tuplesNumber = message.getTuplesNumber();
         this.participantNumber = message.getPs().size();
+        this.finalTimestep = message.getTimesteps().get(message.getTimesteps().size()-1);
         this.timesteps = message.getTimesteps().get(message.getTimesteps().size()-1);
         this.pathname = message.getStoragePath();
         this.maxStale = new long[timesteps];
         this.numStale = new int[timesteps];
-        this.lastStale = new int[participantNumber];
+        this.historyProcess = Utilities.getRandomNum(0, participantNumber-1);
 
         this.observed = new TreeMap<>();
         for(int j = 0; j < participantNumber; j++) {    // add all participants
@@ -54,23 +58,42 @@ public class TheObserver extends UntypedActor {
             }
             this.observed.put(j, pLocalState);
         }
+
+        this.history = new ArrayList<>();
+        for (int i = 0; i < timesteps; i++) {
+            ArrayList<ArrayList<Delta>> process = new ArrayList<>();
+            for (int j = 0; j < participantNumber; j++) {
+                process.add(new ArrayList<>());
+            }
+            this.history.add(process);
+        }
     }
 
-    private void localUpdate(Integer id, Delta d){
+    private void localUpdate(Integer id, Delta d, Integer ts){
         observed.get(id).get(id).set(d.getK(), d);
+        // for the history we do not care about the local values of the selected process
+        if (id != this.historyProcess){
+            this.history.get(ts).get(d.getP()).add(d);
+        }
     }
 
     private void observedUpdate(Integer id, ArrayList<Delta> updates, Integer ts){
+
+        if (ts == this.finalTimestep){
+            saveAndKill();
+        }
+
+        // history
+        if (id == this.historyProcess){
+            this.history.get(ts).get(id).addAll(updates);
+        }
+
+        // max stale
         for(Delta d : updates) {
             if (d.getN() == observed.get(d.getP()).get(d.getP()).get(d.getK()).getN()) {
                 // it means that I reached the last update done locally by d.getP()
                 long staleness = d.getN() - observed.get(id).get(d.getP()).get(d.getK()).getN();
                 observed.get(id).get(d.getP()).set(d.getK(), d);
-
-                for (int i = lastStale[id]; i < ts; i++) {
-                    numStale[i]++;
-                }
-                lastStale[id] = ts;
 
                 if (staleness > maxStale[ts])
                     maxStale[ts] = staleness;
@@ -79,16 +102,37 @@ public class TheObserver extends UntypedActor {
                 // I'm not interested in updating anything
             }
         }
-        save();
+//        save();
     }
 
     private void update(ObserverUpdate message){
         if (message.isLocal()) {
-            localUpdate(message.getId(), message.getDelta());
+            localUpdate(message.getId(), message.getDelta(), message.getTimestep());
         } else {
             observedUpdate(message.getId(), message.getUpdates(), message.getTimestep());
         }
 
+    }
+
+    private void saveAndKill(){
+        ArrayList<Delta> tmp = new ArrayList<>();
+        for (int i = 0; i < history.size(); i++) {
+            for (int j = 0; j < history.get(i).size(); j++) {
+                if (j != this.historyProcess){
+                    tmp.addAll(this.history.get(i).get(j));
+                }
+            }
+            // we remove from all the local updates of timestep ts the
+            // reconciled updates happened at historyProcess participant
+            // In this way we leave inside tmp just the local updates that were
+            // not propagated to historyProcess participant.
+            tmp.removeAll(this.history.get(i).get(this.historyProcess));
+            numStale[i] = tmp.size();
+        }
+
+        save();
+
+        context().system().terminate();
     }
 
     private String arrayString(){
