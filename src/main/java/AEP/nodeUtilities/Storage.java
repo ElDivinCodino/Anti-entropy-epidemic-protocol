@@ -280,7 +280,7 @@ public class Storage {
                             index = t;
                         }
                     }
-                    while (currentMaxDelta > 0 && mtuArrayList.size() < mtuSize) {
+                    while (currentMaxDelta > 0 && mtuArrayList.size() <= mtuSize) {
                         // TODO: scuttle depth ordering. .get(0) or get(size). Check the arrays are properly ordered from smaller to higher v number
                         mtuArrayList.add(mapDelta.get(currentMaxProcess).get(0));
                         mapDelta.get(currentMaxProcess).remove(0);
