@@ -83,25 +83,28 @@ public class TheObserver extends UntypedActor {
             saveAndKill();
         }
 
-        // history
         if (id == this.historyProcess){
+            // history
             this.history.get(ts).get(id).addAll(updates);
-        }
 
-        // max stale
-        for(Delta d : updates) {
-            if (d.getN() == observed.get(d.getP()).get(d.getP()).get(d.getK()).getN()) {
-                // it means that I reached the last update done locally by d.getP()
-                long staleness = d.getN() - observed.get(id).get(d.getP()).get(d.getK()).getN();
-                observed.get(id).get(d.getP()).set(d.getK(), d);
 
-                if (staleness > maxStale[ts])
-                    maxStale[ts] = staleness;
-            } else {
-                // it means that I received an update that is not the last one, so the staleness continues:
-                // I'm not interested in updating anything
+            // max stale
+            for(Delta d : updates) {
+                if (d.getN() == observed.get(d.getP()).get(d.getP()).get(d.getK()).getN()) {
+                    // it means that I reached the last update done locally by d.getP()
+                    long staleness = d.getN() - observed.get(id).get(d.getP()).get(d.getK()).getN();
+                    observed.get(id).get(d.getP()).set(d.getK(), d);
+
+                    if (staleness > maxStale[ts])
+                        maxStale[ts] = staleness;
+                } else {
+                    // it means that I received an update that is not the last one, so the staleness continues:
+                    // I'm not interested in updating anything
+                }
             }
         }
+
+
 //        save();
     }
 
@@ -114,6 +117,10 @@ public class TheObserver extends UntypedActor {
 
     }
 
+    private void computeMaxStale(){
+
+    }
+
     private void saveAndKill(){
         ArrayList<Delta> tmp = new ArrayList<>();
         for (int i = 0; i < history.size(); i++) {
@@ -122,6 +129,7 @@ public class TheObserver extends UntypedActor {
                     tmp.addAll(this.history.get(i).get(j));
                 }
             }
+
             // we remove from all the local updates of timestep ts the
             // reconciled updates happened at historyProcess participant
             // In this way we leave inside tmp just the local updates that were
