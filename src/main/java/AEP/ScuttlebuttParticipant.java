@@ -16,8 +16,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class ScuttlebuttParticipant extends PreciseParticipant {
 
-    private TreeMap<ActorRef, ArrayList<Delta>> storedDigests = new TreeMap<>();
-
     public ScuttlebuttParticipant(int id, CustomLogger.LOG_LEVEL level) {
         super(id, level);
     }
@@ -59,8 +57,8 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
         if (message.isSender()) {
             logger.info("Fourth phase: reconciling and sending differences to " + getSender());
 
-            storage.reconciliation(message.getParticipantStates());
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+            ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
 
             // answer with the updates p has to do, calculated from the temporary digest stored in the TreeMap.
             ArrayList<Delta> toBeUpdated = storage.computeScuttlebuttDifferences(storedDigests.get(getSender()));
@@ -70,8 +68,8 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
         } else {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
-                storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+                ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
 
                 logger.info("Reconciliation... Gossip completed");
             } else { // digest message to respond to

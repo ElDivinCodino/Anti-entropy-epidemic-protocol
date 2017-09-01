@@ -5,6 +5,7 @@ import AEP.nodeUtilities.*;
 import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
+import scala.Array;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
@@ -92,7 +93,12 @@ public class Participant extends UntypedActor{
                     this.updateRate = 0;
                 }
             }else{
+                float prev = this.updateRate;
                 this.updateRate = this.updaterates.get(this.current_timestep_index);
+                // start to update in case we were not updating before
+                if (prev == 0 && this.updateRate != 0){
+                    scheduleUpdateTimeout(Math.round(1000/updateRate), TimeUnit.MILLISECONDS);
+                }
             }
             changeMTU();
 
@@ -126,7 +132,7 @@ public class Participant extends UntypedActor{
      */
     protected void startGossip(StartGossip message){
         logger.info("First phase: Digest from " + getSender());
-        ArrayList<Delta> digest = ((StartGossip) message).getParticipantStates();
+        ArrayList<Delta> digest = message.getParticipantStates();
         // sender set to null because we do not need to answer to this message
         getSender().tell(new GossipMessage(false, storage.computeDifferences(digest)), null);
         // send to p the second message containing the digest (NOTE: in the paper it should be just the outdated entries that q requests to p)
@@ -136,14 +142,14 @@ public class Participant extends UntypedActor{
 
     protected void gossipMessage(GossipMessage message){
         if (message.isSender()) {
-            storage.reconciliation(message.getParticipantStates());
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+            ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
             logger.info("Gossip exchange with node " + sender() + " completed");
         } else {
             // second phase, receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()){ // this is the message with deltas
-                storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+                ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
             }else{ // digest message to respond to
                 // send to q last message of exchange with deltas.
                 getSender().tell(new GossipMessage(true, storage.computeDifferences(message.getParticipantStates())), self());
@@ -154,7 +160,7 @@ public class Participant extends UntypedActor{
 
     private void update() {
         String newValue = Utilities.getRandomNum(0, 1000).toString();
-        int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);
+        int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);  // inclusive range
         Delta update = storage.update(keyToBeUpdated, newValue);
 
         // send update to Observer
@@ -162,10 +168,6 @@ public class Participant extends UntypedActor{
 
         if (this.updateRate != 0)
             scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);
-    }
-
-    protected void test(Object message){
-        logger.error("Method not implemented in class " + this.getClass().getName());
     }
 
     public void onReceive(Object message) throws Exception {

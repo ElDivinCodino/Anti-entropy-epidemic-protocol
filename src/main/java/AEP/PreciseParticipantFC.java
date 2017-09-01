@@ -54,8 +54,8 @@ public class PreciseParticipantFC extends PreciseParticipant{
     protected void gossipMessage(GossipMessage message){
         // p sent to q the updates
         if (message.isSender()) {
-            storage.reconciliation(message.getParticipantStates());
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+            ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
 
             // here we calculate the new flow control parameters updating the local maximum update rate
             // the sender update rate gets included in the gossip message to q
@@ -86,8 +86,8 @@ public class PreciseParticipantFC extends PreciseParticipant{
                 // get the new maximum update rate computed at node p
                 this.updateRate = message.getMaximumUR();
                 // update local states with deltas sent by p
-                storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, message.getParticipantStates(), false), getSelf());
+                ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
 
                 logger.info("Gossip completed");
             } else { // digest message to respond to

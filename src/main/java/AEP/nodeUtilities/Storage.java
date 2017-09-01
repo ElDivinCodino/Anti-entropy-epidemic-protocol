@@ -82,6 +82,8 @@ public class Storage {
     public ArrayList<Delta> createScuttlebuttDigest() {
         ArrayList<Delta> digest = new ArrayList<>();
 
+        // TODO: check participantNumber ordering
+
         for (int i = 0; i < participantNumber; i++){
             long higherVersion = -1;
             int key = -1;
@@ -103,8 +105,8 @@ public class Storage {
      * @param peerStates a TreeMap which has null value if the participant should not be interested in updating that key,
      *                   or a new value with an higher version number instead
      */
-    public void reconciliation (ArrayList<Delta> peerStates) {
-
+    public ArrayList<Delta> reconciliation (ArrayList<Delta> peerStates) {
+        ArrayList<Delta> reconciled = new ArrayList<>(); // to be sent to the observer
         logger.debug("Reconciliation peerStates:" + peerStates);
         for (Delta d : peerStates){
             for (int index = 0; index < this.participantStates.size(); index++) {
@@ -113,13 +115,15 @@ public class Storage {
                         d.getN() > participantStates.get(index).getN()) {
                     participantStates.get(index).setV(d.getV());
                     participantStates.get(index).setN(d.getN());
+                    reconciled.add(participantStates.get(index));
                     // increase index of local state and exit current for loop
                     // to get the next delta
-                    break;
+                    index = this.participantStates.size(); // exit inner loop
                 }
             }
         }
         save();
+        return reconciled;
     }
 
     /**
@@ -160,7 +164,7 @@ public class Storage {
                             participantStates.get(index).getN()));
                     // increase index of local state and exit current for loop
                     // to get the next delta
-                    break;
+                    index = this.participantStates.size(); // exit inner loop
                 }
             }
         }
@@ -175,6 +179,7 @@ public class Storage {
      * @return a TreeMap indicating the values which needs to be updated
      */
     public ArrayList<Delta> computeScuttlebuttDifferences(ArrayList<Delta> digest) {
+        // TODO : check ordering
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
         for (int i = 0; i < digest.size(); i++){
             for (int index = i * tuplesNumber; index < tuplesNumber * (i + 1); index++) {
@@ -185,8 +190,6 @@ public class Storage {
                             participantStates.get(index).getK(),
                             participantStates.get(index).getV(),
                             participantStates.get(index).getN()));
-                    // increase index of local state and exit current for loop
-                    // to get the next delta
                 }
             }
         }
@@ -207,77 +210,85 @@ public class Storage {
                 mapDeltas.put(p, newArray);
             }
         }
+        // TODO: check ordering for version number
         return mapDeltas;
     }
 
-    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Comparator comparator, Ordering method) {
+    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Comparator<Delta> comparator, Ordering method) {
 
         if (state.size() <= mtuSize){
             return state;
         }
         ArrayList<Delta> mtuArrayList = new ArrayList<>();
 
-        Collections.sort(state, comparator);
+        state.sort(comparator);
 
-        if (method == Ordering.OLDEST) { // ascending order (first is smallest timestamp)
-            mtuArrayList.addAll(state.subList(0, mtuSize));
-        } else if (method == Ordering.NEWEST) { // descending order (first is newest timestamp)
-            mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size()));
-            Collections.reverse(mtuArrayList);
-        } else if (method == Ordering.SCUTTLEBREADTH) {
-            TreeMap<Long, ArrayList<Delta>> mapDeltas = statesToTreeMap(state);
-            ArrayList<Long> randomP = new ArrayList<>(mapDeltas.keySet());
-            Collections.shuffle(randomP);
-            int filled = 0;
-            while (filled < mtuSize){
-                for (Long i : randomP){
-                    if (filled == mtuSize)
-                        break;
-                    if (mapDeltas.get(i).size() > 0) {
-                        mtuArrayList.add(mapDeltas.get(i).get(0));
-                        mapDeltas.get(i).remove(0);
-                        filled++;
+        switch (method){
+            case OLDEST:
+                mtuArrayList.addAll(state.subList(0, mtuSize));
+                break;
+            case NEWEST:
+                mtuArrayList.addAll(state.subList(state.size() - mtuSize - 1, state.size()));
+                Collections.reverse(mtuArrayList);
+                break;
+            case SCUTTLEBREADTH:
+                TreeMap<Long, ArrayList<Delta>> mapDeltas = statesToTreeMap(state);
+                ArrayList<Long> randomP = new ArrayList<>(mapDeltas.keySet());
+                Collections.shuffle(randomP);
+                int filled = 0;
+                while (filled < mtuSize){
+                    for (Long i : randomP){
+                        if (filled == mtuSize)
+                            break;
+                        if (mapDeltas.get(i).size() > 0) {
+                            mtuArrayList.add(mapDeltas.get(i).get(0));
+                            mapDeltas.get(i).remove(0);
+                            filled++;
+                        }
                     }
                 }
-            }
-        } else if (method == Ordering.SCUTTLEDEPTH) {
-            int randomOrder = Utilities.getRandomNum(0, 1);
-            TreeMap<Long, ArrayList<Delta>> mapDeltas = statesToTreeMap(state);
+                break;
+            case SCUTTLEDEPTH:
+                int randomOrder = Utilities.getRandomNum(0, 1);
+                TreeMap<Long, ArrayList<Delta>> mapDelta = statesToTreeMap(state);
 
-            long[] process = new long[mapDeltas.size()];  // keys of the processes
-            int[] deltasNum = new int[mapDeltas.size()]; // number of deltas of the processes
+                long[] process = new long[mapDelta.size()];  // keys of the processes
+                int[] deltasNum = new int[mapDelta.size()]; // number of deltas of the processes
 
-            int j = -1;
-            // get the participants with their number of deltas
-            for(Long i : mapDeltas.keySet()) {
+                int j = -1;
+                // get the participants with their number of deltas
+                for(Long i : mapDelta.keySet()) {
 
-                j++;
-                process[j] = i;
-                deltasNum[j] = mapDeltas.get(i).size();
-            }
+                    j++;
+                    process[j] = i;
+                    deltasNum[j] = mapDelta.get(i).size();
+                }
 
-            // while loop to decide which deltas to insert
-            while (mtuArrayList.size() < mtuSize) {
-                long currentMaxProcess = -1;
-                int currentMaxDelta = -1;
-                int index = -1;
+                // while loop to decide which deltas to insert
+                while (mtuArrayList.size() <= mtuSize) {
+                    long currentMaxProcess = -1;
+                    int currentMaxDelta = -1;
+                    int index = -1;
 
-                for (int t = 0; t < deltasNum.length; t++) {
-                    // For participants with the same number of available deltas,
-                    // random ordering among participants is used to remove bias
-                    if (deltasNum[t] > currentMaxDelta || (deltasNum[t] == currentMaxDelta && randomOrder == 0)) {
-                        currentMaxDelta = deltasNum[t];
-                        currentMaxProcess = process[t];
-                        index = t;
+                    // get the process with maximum number of deltas
+                    for (int t = 0; t < deltasNum.length; t++) {
+                        // For participants with the same number of available deltas,
+                        // random ordering among participants is used to remove bias
+                        if (deltasNum[t] > currentMaxDelta || (deltasNum[t] == currentMaxDelta && randomOrder == 0)) {
+                            currentMaxDelta = deltasNum[t];
+                            currentMaxProcess = process[t];
+                            index = t;
+                        }
+                    }
+                    while (currentMaxDelta > 0 && mtuArrayList.size() < mtuSize) {
+                        // TODO: scuttle depth ordering. .get(0) or get(size). Check the arrays are properly ordered from smaller to higher v number
+                        mtuArrayList.add(mapDelta.get(currentMaxProcess).get(0));
+                        mapDelta.get(currentMaxProcess).remove(0);
+                        currentMaxDelta--;
+                        deltasNum[index]--;
                     }
                 }
-                while (currentMaxDelta > 0 && mtuArrayList.size() < mtuSize) {
-                    mtuArrayList.add(mapDeltas.get(currentMaxProcess).get(0));
-                    mapDeltas.get(currentMaxProcess).remove(0);
-                    currentMaxDelta--;
-                    deltasNum[index]--;
-                }
-            }
+                break;
         }
         return mtuArrayList;
     }
