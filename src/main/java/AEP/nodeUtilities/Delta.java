@@ -11,6 +11,7 @@ public class Delta implements Serializable{
     private int k;
     private String v;
     private long n;
+    private long updateTimestamp;
 
     /**
      * @param value the v of the key
@@ -72,6 +73,15 @@ public class Delta implements Serializable{
                 ", n=" + n +
                 '}';
     }
+
+    public long getUpdateTimestamp() {
+        return updateTimestamp;
+    }
+
+    public void setUpdateTimestamp(long updateTimestamp) {
+        this.updateTimestamp = updateTimestamp;
+    }
+
 
     @Override
     public boolean equals(Object o) {

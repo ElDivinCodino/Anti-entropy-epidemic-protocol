@@ -71,6 +71,10 @@ public class Participant extends UntypedActor{
         increaseTimeStep();
         logger.info("Setup completed for node " + id);
 
+        for (int i = id * tuplesNumber; i < (id + 1) * tuplesNumber; i++) {
+            observer.tell(new ObserverUpdate(this.id, 0, storage.getParticipantStates().get(i), true), getSelf());
+        }
+
         scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
         if (this.updateRate != 0)
             scheduleUpdateTimeout(Math.round(1000/updateRate), TimeUnit.MILLISECONDS);

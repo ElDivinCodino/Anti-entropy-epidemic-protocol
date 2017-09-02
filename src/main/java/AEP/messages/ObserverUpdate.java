@@ -15,6 +15,7 @@ public class ObserverUpdate implements Serializable {
     Delta delta;
     ArrayList<Delta> updates;
     boolean local;
+    long timestamp;
 
     public ObserverUpdate(Integer id, Integer timestep, Delta delta, boolean local) {
         this.id = id;
@@ -28,6 +29,14 @@ public class ObserverUpdate implements Serializable {
         this.timestep = timestep;
         this.updates = updates;
         this.local = local;
+    }
+
+    public ObserverUpdate(Integer id, Integer timestep, ArrayList<Delta> updates, boolean local, long timestamp) {
+        this.id = id;
+        this.timestep = timestep;
+        this.updates = updates;
+        this.local = local;
+        this.timestamp = timestamp;
     }
 
     public Integer getTimestep() {
@@ -48,5 +57,9 @@ public class ObserverUpdate implements Serializable {
 
     public Integer getId() {
         return id;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
     }
 }

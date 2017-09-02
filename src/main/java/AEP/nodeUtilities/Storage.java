@@ -33,14 +33,14 @@ public class Storage {
      */
     private void initializeStates(int n, int p) {
 
-        Random r = new Random();
-
         Delta tmp;
+        long t0 = System.currentTimeMillis();
         // initialize participants' states
         for(int i = 0; i < n; i++) {
             for(int j = 0; j < p; j++) {
                 if (i == id) {
-                    tmp = new Delta(i, j, Utilities.getRandomNum(0, 1000).toString(), Utilities.getRandomNum(0, 1000000));
+                    // t0 - j to maintain the invariant about the impossibility of having same version number for different keys in the same process
+                    tmp = new Delta(i, j, Utilities.getRandomNum(0, 1000).toString(), t0 - j);
                 } else {
                     tmp = new Delta(i, j, null, 0);
                 }
@@ -291,6 +291,10 @@ public class Storage {
                 break;
         }
         return mtuArrayList;
+    }
+
+    public ArrayList<Delta> getParticipantStates() {
+        return participantStates;
     }
 
     /**

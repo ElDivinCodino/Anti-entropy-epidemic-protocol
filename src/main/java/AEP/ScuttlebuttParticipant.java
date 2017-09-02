@@ -8,7 +8,6 @@ import akka.actor.ActorRef;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -58,7 +57,7 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
             logger.info("Fourth phase: reconciling and sending differences to " + getSender());
 
             ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
 
             // answer with the updates p has to do, calculated from the temporary digest stored in the TreeMap.
             ArrayList<Delta> toBeUpdated = storage.computeScuttlebuttDifferences(storedDigests.get(getSender()));
@@ -69,7 +68,7 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
                 ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
 
                 logger.info("Reconciliation... Gossip completed");
             } else { // digest message to respond to
