@@ -145,14 +145,14 @@ public class TheObserver extends UntypedActor {
     // takes the new non-stale Delta, and search for the last non-stale Delta to compute the staleness between them
     private void computeStale(int ts, Delta lastDelta, ArrayList<Delta> updates) {
         // oldest will be the last non-stale update among all the updates for the same key
-        Delta oldest = new Delta(lastDelta.getP(), lastDelta.getK(), lastDelta.getV(), Long.MAX_VALUE);
+        Delta oldest = new Delta(lastDelta.getP(), lastDelta.getK(), lastDelta.getV(), lastDelta.getN());
 
         for(Delta oldDeltas : updates) {
             if(oldDeltas.getP() == lastDelta.getP() && oldDeltas.getK() == lastDelta.getK() && oldDeltas.getN() < oldest.getN())
                 oldest = oldDeltas;
         }
 
-        long staleness = lastDelta.getUpdateTimestamp() - oldest.getUpdateTimestamp();
+        long staleness = lastDelta.getUpdateTimestamp() - oldest.getN();
 
         if (staleness > maxStale[ts])
             maxStale[ts] = staleness;
