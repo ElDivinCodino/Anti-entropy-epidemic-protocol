@@ -28,9 +28,6 @@ public class TheObserver extends UntypedActor {
     private long[] maxStale;
     private int[] numStale;
 
-    // array in which store the timestamp of the reconciliations done, per time step
-    private long[] timestamps;
-
     private void initializeObserved(SetupMessage message) {
         this.tuplesNumber = message.getTuplesNumber();
         this.participantNumber = message.getPs().size();
@@ -39,7 +36,6 @@ public class TheObserver extends UntypedActor {
         this.pathname = message.getStoragePath();
         this.maxStale = new long[timesteps];
         this.numStale = new int[timesteps];
-        this.timestamps = new long[timesteps];
         this.historyProcess = Utilities.getRandomNum(0, participantNumber-1);
 
         this.history = new ArrayList<>();
@@ -70,7 +66,7 @@ public class TheObserver extends UntypedActor {
             // history
             this.history.get(ts).get(id).addAll(updates);
             for(Delta d : updates) {
-                d.setUpdateTimestamp(timestampz);
+                d.setUpdateTimestamp(timestamp);
             }
         }
     }
@@ -97,7 +93,7 @@ public class TheObserver extends UntypedActor {
 
     private void computeMaxStale(){
         ArrayList<Delta> tmp = new ArrayList<>();
-        // contains all the updates done by the chosen process until a certain timestep
+        // contains all the updates done by the chosen process until a certain time step
         ArrayList<Delta> historyProcessUpdates = new ArrayList<>();
 
         for (int i = 0; i < history.size(); i++) {
@@ -131,9 +127,9 @@ public class TheObserver extends UntypedActor {
     // seeks if delta is equal to the last one updated
     private boolean isTheLastOne(Delta d, ArrayList<Delta> tmp) {
         for(int i = (tmp.size() - 1); i > -1; i--) {
-            // if the first element at timestep i, for process d.getP and key d.getK that I
+            // if the first element at time step i, for process d.getP and key d.getK that I
             // encounter starting from last ts han not the same timestamp, it means that d is not the last one
-            if (tmp.get(i).getK() == d.getK()) {
+            if (tmp.get(i).getP() == d.getP() && tmp.get(i).getK() == d.getK()) {
                 if (tmp.get(i).getN() != d.getN()) {
                     return false;
                 } else {
@@ -142,6 +138,7 @@ public class TheObserver extends UntypedActor {
             }
         }
         // if there is not such delta, it means that is the only one, so also the last one
+        // N.B. not sure if this statement is ever reached
         return true;
     }
 
@@ -154,9 +151,8 @@ public class TheObserver extends UntypedActor {
             if(oldDeltas.getP() == lastDelta.getP() && oldDeltas.getK() == lastDelta.getK() && oldDeltas.getN() < oldest.getN())
                 oldest = oldDeltas;
         }
-        // PROBLEMA: lastDelta.getN è il numero di versione, non il timestamp di quando viene fatto il suo update!
-        //long staleness = lastDelta.getN() - oldest.getN();
-        long staleness = timestamps[ts] - oldest.getN();
+
+        long staleness = lastDelta.getUpdateTimestamp() - oldest.getUpdateTimestamp();
 
         if (staleness > maxStale[ts])
             maxStale[ts] = staleness;
