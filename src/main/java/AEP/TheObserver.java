@@ -62,6 +62,7 @@ public class TheObserver extends UntypedActor {
             saveAndKill();
         }
 
+        // TODO: Performance improvement, send local updates just from the chosen process
         if (id == this.historyProcess) {
             // history
             this.history.get(ts).get(id).addAll(updates);
@@ -92,6 +93,7 @@ public class TheObserver extends UntypedActor {
     }
 
     private void computeMaxStale(){
+        // contains all updates
         ArrayList<Delta> tmp = new ArrayList<>();
         // contains all the updates done by the chosen process until a certain time step
         ArrayList<Delta> historyProcessUpdates = new ArrayList<>();
@@ -107,6 +109,7 @@ public class TheObserver extends UntypedActor {
 
             for (Delta d: this.history.get(i).get(this.historyProcess)) {
                 // if d is the last update done by d.getP at time step i
+                // TODO: tmp.contains(d) > non dovrebbe essere ovvio?
                 if (tmp.contains(d) && isTheLastOne(d, tmp)) {
                     computeStale(i, d, historyProcessUpdates);
                     ArrayList<Delta> toBeRemoved = new ArrayList<>();
@@ -145,7 +148,7 @@ public class TheObserver extends UntypedActor {
     // takes the new non-stale Delta, and search for the last non-stale Delta to compute the staleness between them
     private void computeStale(int ts, Delta lastDelta, ArrayList<Delta> updates) {
         // oldest will be the last non-stale update among all the updates for the same key
-        Delta oldest = new Delta(lastDelta.getP(), lastDelta.getK(), lastDelta.getV(), lastDelta.getN());
+        Delta oldest = new Delta(lastDelta.getP(), lastDelta.getK(), lastDelta.getV(), lastDelta.getN());  // TODO: possiamo rimuovere oldest ed usare direttamente lastDelta?
 
         for(Delta oldDeltas : updates) {
             if(oldDeltas.getP() == lastDelta.getP() && oldDeltas.getK() == lastDelta.getK() && oldDeltas.getN() < oldest.getN())
