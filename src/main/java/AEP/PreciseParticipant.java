@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by StefanoFiora on 28/08/2017.
@@ -85,10 +86,14 @@ public class PreciseParticipant extends Participant {
             observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
 
             if (this.flow_control) {
+                // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
+                if (this.updateRate == 0 && message.getMaximumUR() > 0){
+                    scheduleUpdateTimeout(Math.round(1000/message.getMaximumUR()), TimeUnit.MILLISECONDS);
+                }
                 // get the new maximum update rate computed at node p
                 this.updateRate = message.getMaximumUR();
             }
-            
+
             // answer with the updates p has to do. Sender set to null because we do not need to answer to this message
             ArrayList<Delta> toBeUpdated = storage.computeDifferences(this.storedDigests.get(getSender()));
 
@@ -159,10 +164,17 @@ public class PreciseParticipant extends Participant {
         }
         // this invariant must hold between updates
         assert oldMax1 + oldMax2 == this.updateRate + senderupdateRate;
+
+        // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
+        if (oldMax1 == 0 && this.updateRate > 0){
+            scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);
+        }
+
         return senderupdateRate;
     }
 
     protected void localAdaptation(int messageSize){
+        float prev = this.updateRate;
         if (messageSize > this.mtu) {
             this.phiBiggerCounter++;
             // reset smaller counter
@@ -178,6 +190,10 @@ public class PreciseParticipant extends Participant {
         }
         if (this.phiSmallerCounter >= this.phiSmallerMax){
             this.updateRate = Math.min(this.updateRate + this.beta, mtu);
+        }
+        // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
+        if (prev == 0 && this.updateRate > 0){
+            scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);
         }
     }
 

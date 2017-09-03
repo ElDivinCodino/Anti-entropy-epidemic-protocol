@@ -91,18 +91,20 @@ public class Participant extends UntypedActor{
         }
         // if there is a change in the update rate
         if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
+            float prev = this.updateRate;
             if (flow_control){
                 this.desiredUR = this.updaterates.get(this.current_timestep_index);
                 if (this.desiredUR == 0){
                     this.updateRate = 0;
                 }
+                // else updateRate is adjusted automatically through flow control
+
             }else{
-                float prev = this.updateRate;
                 this.updateRate = this.updaterates.get(this.current_timestep_index);
-                // start to update in case we were not updating before
-                if (prev == 0 && this.updateRate != 0){
-                    scheduleUpdateTimeout(Math.round(1000/updateRate), TimeUnit.MILLISECONDS);
-                }
+            }
+            // start to update in case we were not updating before
+            if (prev == 0 && this.updateRate != 0){
+                scheduleUpdateTimeout(Math.round(1000/updateRate), TimeUnit.MILLISECONDS);
             }
             changeMTU();
 
@@ -215,7 +217,7 @@ public class Participant extends UntypedActor{
      * @param time quantity of time chosen
      * @param unit time unit measurement chosen
      */
-    private void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
+    protected void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new UpdateTimeout(), getContext().system().dispatcher(), getSelf());
