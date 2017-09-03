@@ -42,7 +42,7 @@ public class MainClass {
         Float beta = (float)myConfig.getDouble("aep.flowcontrol.beta");
         Integer phi1 = myConfig.getInt("aep.flowcontrol.phi1");
         Integer phi2 = myConfig.getInt("aep.flowcontrol.phi2");
-        Boolean flow_control = false;
+        Boolean flow_control = myConfig.getBoolean("aep.flowcontrol.flowcontrol");
         String loglevel = myConfig.getString("aep.logger.level");
         CustomLogger.LOG_LEVEL level = null;
 
@@ -85,14 +85,6 @@ public class MainClass {
                 break;
             case "ScuttlebuttParticipant":
                 myClass = ScuttlebuttParticipant.class;
-                break;
-            case "PreciseParticipantFC":
-                myClass = PreciseParticipantFC.class;
-                flow_control = true;
-                break;
-            case "ScuttlebuttParticipantFC":
-//              myClass = ScuttlebuttParticipantFC.class;
-                flow_control = true;
                 break;
         }
 
