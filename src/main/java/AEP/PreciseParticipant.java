@@ -63,7 +63,9 @@ public class PreciseParticipant extends Participant {
     protected void changeMTU(){
         if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
             this.mtu = this.mtuArray.get(this.current_timestep_index);
-            System.out.println("MTU changed to " + this.mtu);
+            if (this.id == this.chosenProcess) {
+                System.out.println("MTU changed to " + this.mtu);
+            }
         }
     }
 
