@@ -51,7 +51,7 @@ public class Participant extends UntypedActor{
         this.logger.setLevel(level);
     }
 
-    protected void initValues(SetupMessage message){
+    protected synchronized void initValues(SetupMessage message){
         this.tuplesNumber = message.getTuplesNumber();
         this.observer = message.getObserver();
         this.ps = message.getPs();
@@ -66,7 +66,7 @@ public class Participant extends UntypedActor{
         this.updateRate = this.updaterates.get(0);
     }
 
-    private void setupMessage(SetupMessage message){
+    private synchronized void setupMessage(SetupMessage message){
         initValues(message);
         increaseTimeStep();
         logger.info("Setup completed for node " + id);
@@ -79,7 +79,7 @@ public class Participant extends UntypedActor{
             scheduleUpdateTimeout(Math.round(1000/updateRate), TimeUnit.MILLISECONDS);
     }
 
-    protected void increaseTimeStep(){
+    protected synchronized void increaseTimeStep(){
         // increase time counter
         this.current_timestep++;
         if (this.chosenProcess == this.id) {
@@ -116,7 +116,7 @@ public class Participant extends UntypedActor{
         }
 
         // from the configuration file then the UR will just be the value obtained by flow control calculations
-        if (this.chosenProcess == this.id){
+        if (this.chosenProcess == this.id && this.current_timestep < this.timesteps.get(this.timesteps.size() - 1)){
             System.out.println("Participant: " + this.id + "   updateRate:" + this.updateRate);
             this.observer.tell(new ObserverUpdateRate(this.id, this.current_timestep, this.updateRate), getSelf());
         }
@@ -124,7 +124,7 @@ public class Participant extends UntypedActor{
 
     protected void changeMTU() {}
 
-    protected void timeoutMessage(TimeoutMessage message){
+    protected synchronized void timeoutMessage(TimeoutMessage message){
         this.increaseTimeStep();
 
         int rndId;
@@ -149,7 +149,7 @@ public class Participant extends UntypedActor{
      * First phase, here q receives the Digest from p
      * @param message
      */
-    protected void startGossip(StartGossip message){
+    protected synchronized void startGossip(StartGossip message){
         logger.info("First phase: Digest from " + getSender());
         ArrayList<Delta> digest = message.getParticipantStates();
         // sender set to null because we do not need to answer to this message
@@ -159,7 +159,7 @@ public class Participant extends UntypedActor{
         logger.info("Second phase: sending differences + digest to " + getSender());
     }
 
-    protected void gossipMessage(GossipMessage message){
+    protected synchronized void gossipMessage(GossipMessage message){
         if (message.isSender()) {
             ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
             observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
@@ -177,7 +177,7 @@ public class Participant extends UntypedActor{
         }
     }
 
-    private void update() {
+    private synchronized void update() {
         String newValue = Utilities.getRandomNum(0, 1000).toString();
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);  // inclusive range
 
@@ -220,7 +220,7 @@ public class Participant extends UntypedActor{
      * @param time quantity of time chosen
      * @param unit time unit measurement chosen
      */
-    protected void scheduleTimeout(Integer time, TimeUnit unit) {
+    protected synchronized void scheduleTimeout(Integer time, TimeUnit unit) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new TimeoutMessage(), getContext().system().dispatcher(), getSelf());
@@ -233,7 +233,7 @@ public class Participant extends UntypedActor{
      * @param time quantity of time chosen
      * @param unit time unit measurement chosen
      */
-    protected void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
+    protected synchronized void scheduleUpdateTimeout(Integer time, TimeUnit unit) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(time, unit),
                 getSelf(), new UpdateTimeout(), getContext().system().dispatcher(), getSelf());

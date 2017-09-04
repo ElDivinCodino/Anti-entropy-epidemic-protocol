@@ -10,6 +10,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.TreeMap;
 
 /**
  * Created by StefanoFiora on 30/08/2017.
@@ -25,8 +26,9 @@ public class TheObserver extends UntypedActor {
     private ArrayList<ArrayList<ArrayList<Delta>>> history;
 
     // these array lists are #timesteps long
-    private ArrayList<ArrayList<Long>> maxStalePerProcess;
-    private long[] maxStale;
+    private ArrayList<ArrayList<Integer>> maxStalePerProcess;
+    private ArrayList<ArrayList<Integer>> numStalePerProcess;
+    private int[] maxStale;
     private int[] numStale;
 
     // keep track of the updateRate used by a chosen process at each time step
@@ -39,7 +41,7 @@ public class TheObserver extends UntypedActor {
         this.pathname = message.getStoragePath();
         this.historyProcess = message.getChosenProcess();
         this.maxStalePerProcess = new ArrayList<>(timesteps);
-        this.maxStale = new long[timesteps];
+        this.maxStale = new int[timesteps];
         this.numStale = new int[timesteps];
         this.updateRates = new float[timesteps];
         System.out.println("Observer chosen participant: " + this.historyProcess);
@@ -50,7 +52,7 @@ public class TheObserver extends UntypedActor {
             maxStalePerProcess.add(new ArrayList<>());
             for (int j = 0; j < participantNumber; j++) {
                 process.add(new ArrayList<>());
-                maxStalePerProcess.get(i).add((long) 0);
+                maxStalePerProcess.get(i).add(0);
             }
             this.history.add(process);
         }
@@ -84,57 +86,18 @@ public class TheObserver extends UntypedActor {
 
     private void saveAndKill(){
 
-        computeMaxStale();
+//        computeMaxStale();
 
-        computeNumStale();
+        for (int i = 0; i < participantNumber; i++) {
+            computeNumStale(i);
+        }
+        for (int i = 0; i < timesteps; i++) {
+            maxStale[i] = Collections.max(maxStalePerProcess.get(i));
+        }
 
         save();
 
         context().system().terminate();
-    }
-
-    private void computeMaxStale() {
-        // for each participant
-        for (int p = 0; p < participantNumber; p++) {
-            // contains all updates
-            ArrayList<Delta> tmp = new ArrayList<>();
-            // contains all the updates done by the chosen process until a certain time step
-            ArrayList<Delta> historyProcessUpdates = new ArrayList<>();
-
-            // for each time step
-            for (int i = 0; i < history.size(); i++) {
-                // for each id
-                for (int j = 0; j < history.get(i).size(); j++) {
-                    if (j != p) {
-                        tmp.addAll(getLocals(this.history.get(i).get(j), j, true));
-                    } else {
-                        historyProcessUpdates.addAll(getLocals(this.history.get(i).get(j), j, false));
-                    }
-                }
-
-                for (Delta d : getLocals(this.history.get(i).get(p), p, false)) {
-                    // if d is the last update done by d.getP at time step i
-                    // TODO: tmp.contains(d) > non dovrebbe essere ovvio?
-                    if (tmp.contains(d) && isTheLastOne(d, tmp)) {
-                        computeStale(p, i, d, historyProcessUpdates);
-                        ArrayList<Delta> toBeRemoved = new ArrayList<>();
-                        for (Delta oldDeltas : historyProcessUpdates) {
-                            if (oldDeltas.getP() == d.getP() && oldDeltas.getK() == d.getK()) {
-                                // I don't need all the older updates anymore, so I delete them
-                                toBeRemoved.add(oldDeltas);
-                            }
-                        }
-                        historyProcessUpdates.removeAll(toBeRemoved);
-                        // I will remove also d, so I re-add it in order to compute the stale next time
-                        historyProcessUpdates.add(d);
-                    }
-                }
-            }
-        }
-        // finished to compute the maxStale for each timestamp for each process, time to take the maximum
-        for (int ts = 0; ts < maxStalePerProcess.size(); ts++) {
-            maxStale[ts] = Collections.max(maxStalePerProcess.get(ts));
-        }
     }
 
     // filter out and take only the local updates if locals == true, ore the non local updates if locals == false
@@ -152,59 +115,85 @@ public class TheObserver extends UntypedActor {
         return localDeltas;
     }
 
-    // seeks if delta is equal to the last one updated
-    private boolean isTheLastOne(Delta d, ArrayList<Delta> tmp) {
-        for(int i = (tmp.size() - 1); i > -1; i--) {
-            // if the first element at time step i, for process d.getP and key d.getK that I
-            // encounter starting from last ts han not the same timestamp, it means that d is not the last one
-            if (tmp.get(i).getP() == d.getP() && tmp.get(i).getK() == d.getK()) {
-                if (tmp.get(i).getN() != d.getN()) {
-                    return false;
-                } else {
-                    return true;
-                }
-            }
-        }
-        // if there is not such delta, it means that is the only one, so also the last one
-        // N.B. not sure if this statement is ever reached
-        return true;
-    }
+    private void computeNumStale(Integer mainProcess) {
 
-    // takes the new non-stale Delta, and search for the last non-stale Delta to compute the staleness between them
-    private void computeStale(int process, int ts, Delta lastDelta, ArrayList<Delta> updates) {
-        // oldest will be the last non-stale update among all the updates for the same key
-        Delta oldest = new Delta(lastDelta.getP(), lastDelta.getK(), lastDelta.getV(), lastDelta.getN());
-        oldest.setUpdateTimestamp(lastDelta.getUpdateTimestamp());
-
-        for(Delta oldDeltas : updates) {
-            if(oldDeltas.getP() == lastDelta.getP() && oldDeltas.getK() == lastDelta.getK() && oldDeltas.getN() < oldest.getN())
-                oldest = oldDeltas;
+        // a map that keeps track of the stale deltas present in the historyProcess
+        // At each timestep the reconciled deltas are removed, the ones that remain increase the stale counter
+        // At each timestep we take the element with higher counter.
+        // first key is the process, second key is the delta key
+        TreeMap<Integer, TreeMap<Integer, Integer>> maxStaleCounter = new TreeMap<>();
+        for (int j = 0; j < participantNumber; j++) {
+            maxStaleCounter.put(j, new TreeMap<>());
         }
 
-        long staleness = lastDelta.getUpdateTimestamp() - oldest.getUpdateTimestamp();
-
-        if (staleness > maxStalePerProcess.get(ts).get(process)) {
-            maxStalePerProcess.get(ts).set(process, staleness);
-        }
-
-    }
-
-    private void computeNumStale() {
         ArrayList<Delta> tmp = new ArrayList<>();
+
         for (int i = 0; i < history.size(); i++) {
             for (int j = 0; j < history.get(i).size(); j++) {
-                if (j != this.historyProcess){
+                if (j != mainProcess){
                     tmp.addAll(getLocals(this.history.get(i).get(j), j, true));
                 }
             }
+
+            ArrayList<Delta> inter = intersection(tmp, getLocals(this.history.get(i).get(mainProcess), mainProcess, false));
 
             // we remove from all the local updates of timestep ts the
             // reconciled updates happened at historyProcess participant
             // In this way we leave inside tmp just the local updates that were
             // not propagated to historyProcess participant.
-            tmp.removeAll(getLocals(this.history.get(i).get(this.historyProcess), this.historyProcess, false));
+            boolean changed = tmp.removeAll(getLocals(this.history.get(i).get(mainProcess), mainProcess, false));  // returns true if the operation changes the list
             numStale[i] = tmp.size();
+
+            // first we need to remove from the tree map the Deltas that have been reconciled
+            if (changed) { // otherwise we don't even bother
+                for (Delta d : inter){
+                    if (maxStaleCounter.get(d.getP()).containsKey(d.getK())){
+                        maxStaleCounter.get(d.getP()).remove(d.getK());
+                    }
+                }
+            }else{
+                assert inter.size() == 0;
+            }
+
+            /*
+             tmp contains now the deltas that are stale in process hitoryPrcess at timestep i
+             so now we can do two things:
+                - if the delta was stale at previous ts, then it is already present in the treemap and we increase the counter
+                - if the delta was not stale before, then we insert the key in the treemap
+            */
+            for (Delta d : tmp) {
+                if (maxStaleCounter.get(d.getP()).containsKey(d.getK())){  // increase staleness of this key
+                    maxStaleCounter.get(d.getP()).put(d.getK(), maxStaleCounter.get(d.getP()).get(d.getK()) + 1);
+                } else {
+                    maxStaleCounter.get(d.getP()).put(d.getK(), 1);
+                }
+            }
+
+            // now get the maximum value in the treeMap and elect that kay as maximum stale
+            ArrayList<Integer> maxes = new ArrayList<>();
+            for (int j = 0; j < participantNumber; j++) {
+                if (maxStaleCounter.get(j).size() > 0){
+                    maxes.add(Collections.max(maxStaleCounter.get(j).values()));
+                }
+            }
+            if (maxes.size() > 0){
+//                maxStale[i] = Collections.max(maxes);
+                // at timestep i per process mainProcess
+                maxStalePerProcess.get(i).set(mainProcess, Collections.max(maxes));
+            }
         }
+    }
+
+    public ArrayList<Delta> intersection(ArrayList<Delta> list1, ArrayList<Delta> list2) {
+        ArrayList<Delta> list = new ArrayList<>();
+
+        for (Delta t : list1) {
+            if(list2.contains(t)) {
+                list.add(t);
+            }
+        }
+
+        return list;
     }
 
     private String arrayString(){

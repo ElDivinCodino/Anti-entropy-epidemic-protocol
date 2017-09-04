@@ -41,7 +41,7 @@ public class PreciseParticipant extends Participant {
         super(id, level);
     }
 
-    protected void initValues(SetupMessage message){
+    protected synchronized void initValues(SetupMessage message){
         this.mtuArray = message.getMtu();
         // get first value as starting MTU
         this.mtu = mtuArray.get(0);
@@ -60,7 +60,7 @@ public class PreciseParticipant extends Participant {
         }
     }
 
-    protected void changeMTU(){
+    protected synchronized void changeMTU(){
         if (this.current_timestep_index < mtuArray.size() && this.current_timestep == this.timesteps.get(this.current_timestep_index)){
             this.mtu = this.mtuArray.get(this.current_timestep_index);
             if (this.id == this.chosenProcess) {
@@ -69,7 +69,7 @@ public class PreciseParticipant extends Participant {
         }
     }
 
-    protected void startGossip(StartGossip message){
+    protected synchronized void startGossip(StartGossip message){
         logger.info("First phase: Digest from " + getSender());
 
         // store the digest of p in a TreeMap, in order to compute the differences later on, in the fourth phase
@@ -81,7 +81,7 @@ public class PreciseParticipant extends Participant {
         logger.info("Second phase: sending digest to " + getSender());
     }
 
-    protected void gossipMessage(GossipMessage message){
+    protected synchronized void gossipMessage(GossipMessage message){
         // p sent to q the updates
         if (message.isSender()) {
 

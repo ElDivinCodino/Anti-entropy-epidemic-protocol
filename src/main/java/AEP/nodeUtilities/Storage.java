@@ -31,7 +31,7 @@ public class Storage {
      * @param n number of participants
      * @param p number of pairs for each participant
      */
-    private void initializeStates(int n, int p) {
+    private synchronized void initializeStates(int n, int p) {
 
         Delta tmp;
         long t0 = System.currentTimeMillis();
@@ -52,7 +52,7 @@ public class Storage {
     }
 
 
-    public Delta update(int key, String value) {
+    public synchronized Delta update(int key, String value) {
         Delta deltaToBeUpdated = participantStates.get((id * tuplesNumber) + key);
         deltaToBeUpdated.setV(value);
         deltaToBeUpdated.setN(System.currentTimeMillis());
@@ -67,7 +67,7 @@ public class Storage {
      * This method performs the digest of the storage of the participant
      * @return a ArrayList containing the states of the participants with null values
      */
-    public ArrayList<Delta> createDigest() {
+    public synchronized ArrayList<Delta> createDigest() {
         ArrayList<Delta> digest = new ArrayList<>();
         for (Delta d : this.participantStates){
             digest.add(new Delta(d.getP(), d.getK(), null, d.getN()));
@@ -79,7 +79,7 @@ public class Storage {
      * This method performs the digest of the storage of the participant following Scuttlebutt directives
      * @return a ArrayList containing the maximum version number for each participant
      */
-    public ArrayList<Delta> createScuttlebuttDigest() {
+    public synchronized ArrayList<Delta> createScuttlebuttDigest() {
         ArrayList<Delta> digest = new ArrayList<>();
 
         // TODO: check participantNumber ordering
@@ -105,7 +105,7 @@ public class Storage {
      * @param peerStates a TreeMap which has null value if the participant should not be interested in updating that key,
      *                   or a new value with an higher version number instead
      */
-    public ArrayList<Delta> reconciliation (ArrayList<Delta> peerStates) {
+    public synchronized ArrayList<Delta> reconciliation (ArrayList<Delta> peerStates) {
         ArrayList<Delta> reconciled = new ArrayList<>(); // to be sent to the observer
         logger.debug("Reconciliation peerStates:" + peerStates);
         for (Delta d : peerStates){
@@ -129,7 +129,7 @@ public class Storage {
     /**
      * this method saves the storage on a local text file
      */
-    private void save() {
+    private synchronized void save() {
         try {
             FileWriter out = new FileWriter(pathname);
             out.write(this.toString());
@@ -147,7 +147,7 @@ public class Storage {
      * @param digest the digest coming from the other peer
      * @return a TreeMap indicating the values which needs to be updated
      */
-    public ArrayList<Delta> computeDifferences(ArrayList<Delta> digest) {
+    public synchronized ArrayList<Delta> computeDifferences(ArrayList<Delta> digest) {
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
 
         for (Delta d : digest){
@@ -178,7 +178,7 @@ public class Storage {
      * @param digest the digest coming from the other peer
      * @return a TreeMap indicating the values which needs to be updated
      */
-    public ArrayList<Delta> computeScuttlebuttDifferences(ArrayList<Delta> digest) {
+    public synchronized ArrayList<Delta> computeScuttlebuttDifferences(ArrayList<Delta> digest) {
         // TODO : check ordering
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
         for (int i = 0; i < digest.size(); i++){
@@ -196,7 +196,7 @@ public class Storage {
         return toBeUpdated;
     }
 
-    private TreeMap<Long, ArrayList<Delta>> statesToTreeMap(ArrayList<Delta> states){
+    private synchronized TreeMap<Long, ArrayList<Delta>> statesToTreeMap(ArrayList<Delta> states){
         // represents how many deltas are available for each process.
         TreeMap<Long, ArrayList<Delta>> mapDeltas = new TreeMap<>();
         for (Delta d: states) {
@@ -214,7 +214,7 @@ public class Storage {
         return mapDeltas;
     }
 
-    public ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Comparator<Delta> comparator, Ordering method) {
+    public synchronized ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Comparator<Delta> comparator, Ordering method) {
 
         if (state.size() <= mtuSize){
             return state;
@@ -293,7 +293,7 @@ public class Storage {
         return mtuArrayList;
     }
 
-    public ArrayList<Delta> getParticipantStates() {
+    public synchronized ArrayList<Delta> getParticipantStates() {
         return participantStates;
     }
 
