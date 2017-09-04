@@ -4,19 +4,20 @@ import AEP.messages.ObserverUpdate;
 import AEP.messages.ObserverUpdateRate;
 import AEP.messages.SetupMessage;
 import AEP.nodeUtilities.Delta;
-import AEP.nodeUtilities.Utilities;
 import akka.actor.UntypedActor;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Created by StefanoFiora on 30/08/2017.
  */
 public class TheObserver extends UntypedActor {
 
-    private int tuplesNumber;
     private int participantNumber;
     private int timesteps;
     private int finalTimestep;
@@ -26,6 +27,7 @@ public class TheObserver extends UntypedActor {
     private ArrayList<ArrayList<ArrayList<Delta>>> history;
 
     // these array lists are #timesteps long
+    private ArrayList<ArrayList<Long>> maxStalePerProcess;
     private long[] maxStale;
     private int[] numStale;
 
@@ -33,12 +35,12 @@ public class TheObserver extends UntypedActor {
     private float[] updateRates;
 
     private void initializeObserved(SetupMessage message) {
-        this.tuplesNumber = message.getTuplesNumber();
         this.participantNumber = message.getPs().size();
         this.finalTimestep = message.getTimesteps().get(message.getTimesteps().size()-1);
         this.timesteps = message.getTimesteps().get(message.getTimesteps().size()-1);
         this.pathname = message.getStoragePath();
         this.historyProcess = message.getChosenProcess();
+        this.maxStalePerProcess = new ArrayList<>(timesteps);
         this.maxStale = new long[timesteps];
         this.numStale = new int[timesteps];
         this.updateRates = new float[timesteps];
@@ -47,8 +49,10 @@ public class TheObserver extends UntypedActor {
         this.history = new ArrayList<>();
         for (int i = 0; i < timesteps; i++) {
             ArrayList<ArrayList<Delta>> process = new ArrayList<>();
+            maxStalePerProcess.add(new ArrayList<>());
             for (int j = 0; j < participantNumber; j++) {
                 process.add(new ArrayList<>());
+                maxStalePerProcess.get(i).add((long) 0);
             }
             this.history.add(process);
         }
@@ -64,83 +68,95 @@ public class TheObserver extends UntypedActor {
         }
     }
 
-    private void localUpdate(Integer id, Delta d, Integer ts){
-
-        // for the history we do not care about the local values of the selected process
-        if (id != this.historyProcess){
-            this.history.get(ts).get(d.getP()).add(d);
-        }
-    }
-
-    private void observedUpdate(Integer id, ArrayList<Delta> updates, Integer ts, long timestamp) {
+    private void update(ObserverUpdate message) {
+        Integer id = message.getId();
+        ArrayList<Delta> updates = message.getUpdates();
+        Integer ts = message.getTimestep();
+        long timestamp = message.getTimestamp();
 
         if (ts == this.finalTimestep) {
             saveAndKill();
         }
 
-        // TODO: Performance improvement, send local updates just from the chosen process
-        if (id == this.historyProcess) {
-            // history
-            this.history.get(ts).get(id).addAll(updates);
-            for(Delta d : updates) {
-                d.setUpdateTimestamp(timestamp);
-            }
-        }
-    }
-
-    private void update(ObserverUpdate message){
-        if (message.isLocal()) {
-            localUpdate(message.getId(), message.getDelta(), message.getTimestep());
-        } else {
-            observedUpdate(message.getId(), message.getUpdates(), message.getTimestep(), message.getTimestamp());
+        this.history.get(ts).get(id).addAll(updates);
+        for(Delta d : updates) {
+            d.setUpdateTimestamp(timestamp);
         }
 
     }
 
     private void saveAndKill(){
 
+        System.out.println("Computing maxStalenes...");
         computeMaxStale();
 
+        System.out.println("Computing numStalenes...");
         computeNumStale();
 
+        System.out.println("Saving...");
         save();
 
+        System.out.println("Shutting down...");
         context().system().terminate();
     }
 
-    private void computeMaxStale(){
-        // contains all updates
-        ArrayList<Delta> tmp = new ArrayList<>();
-        // contains all the updates done by the chosen process until a certain time step
-        ArrayList<Delta> historyProcessUpdates = new ArrayList<>();
+    private void computeMaxStale() {
+        // for each participant
+        for (int p = 0; p < participantNumber; p++) {
+            // contains all updates
+            ArrayList<Delta> tmp = new ArrayList<>();
+            // contains all the updates done by the chosen process until a certain time step
+            ArrayList<Delta> historyProcessUpdates = new ArrayList<>();
 
-        for (int i = 0; i < history.size(); i++) {
-            for (int j = 0; j < history.get(i).size(); j++) {
-                if (j != this.historyProcess){
-                    tmp.addAll(this.history.get(i).get(j));
-                } else {
-                    historyProcessUpdates.addAll(this.history.get(i).get(j));
-                }
-            }
-
-            for (Delta d: this.history.get(i).get(this.historyProcess)) {
-                // if d is the last update done by d.getP at time step i
-                // TODO: tmp.contains(d) > non dovrebbe essere ovvio?
-                if (tmp.contains(d) && isTheLastOne(d, tmp)) {
-                    computeStale(i, d, historyProcessUpdates);
-                    ArrayList<Delta> toBeRemoved = new ArrayList<>();
-                    for(Delta oldDeltas : historyProcessUpdates) {
-                        if(oldDeltas.getP() == d.getP() && oldDeltas.getK() == d.getK()){
-                            // I don't need all the older updates anymore, so I delete them
-                            toBeRemoved.add(oldDeltas);
-                        }
+            // for each time step
+            for (int i = 0; i < history.size(); i++) {
+                // for each id
+                for (int j = 0; j < history.get(i).size(); j++) {
+                    if (j != p) {
+                        tmp.addAll(getLocals(this.history.get(i).get(j), j, true));
+                    } else {
+                        historyProcessUpdates.addAll(getLocals(this.history.get(i).get(j), j, false));
                     }
-                    historyProcessUpdates.removeAll(toBeRemoved);
-                    // I will remove also d, so I re-add it in order to compute the stale next time
-                    historyProcessUpdates.add(d);
+                }
+
+                for (Delta d : this.history.get(i).get(p)) {
+                    // if d is the last update done by d.getP at time step i
+                    // TODO: tmp.contains(d) > non dovrebbe essere ovvio?
+                    if (tmp.contains(d) && isTheLastOne(d, tmp)) {
+                        computeStale(p, i, d, historyProcessUpdates);
+                        ArrayList<Delta> toBeRemoved = new ArrayList<>();
+                        for (Delta oldDeltas : historyProcessUpdates) {
+                            if (oldDeltas.getP() == d.getP() && oldDeltas.getK() == d.getK()) {
+                                // I don't need all the older updates anymore, so I delete them
+                                toBeRemoved.add(oldDeltas);
+                            }
+                        }
+                        historyProcessUpdates.removeAll(toBeRemoved);
+                        // I will remove also d, so I re-add it in order to compute the stale next time
+                        historyProcessUpdates.add(d);
+                    }
                 }
             }
         }
+        // finished to compute the maxStale for each timestamp for each process, time to take the maximum
+        for (int ts = 0; ts < maxStalePerProcess.size(); ts++) {
+            maxStale[ts] = Collections.max(maxStalePerProcess.get(ts));
+        }
+    }
+
+    // filter out and take only the local updates if locals == true, ore the non local updates if locals == false
+    private ArrayList<Delta> getLocals (ArrayList<Delta> updates, int process, boolean locals) {
+        ArrayList<Delta> localDeltas = new ArrayList<>();
+
+        for (Delta d: updates) {
+            if (d.getP() == process && locals) {
+                localDeltas.add(d);
+            } else if (d.getP() != process && !locals){
+                localDeltas.add(d);
+            }
+        }
+
+        return localDeltas;
     }
 
     // seeks if delta is equal to the last one updated
@@ -162,7 +178,7 @@ public class TheObserver extends UntypedActor {
     }
 
     // takes the new non-stale Delta, and search for the last non-stale Delta to compute the staleness between them
-    private void computeStale(int ts, Delta lastDelta, ArrayList<Delta> updates) {
+    private void computeStale(int process, int ts, Delta lastDelta, ArrayList<Delta> updates) {
         // oldest will be the last non-stale update among all the updates for the same key
         Delta oldest = new Delta(lastDelta.getP(), lastDelta.getK(), lastDelta.getV(), lastDelta.getN());  // TODO: possiamo rimuovere oldest ed usare direttamente lastDelta?
 
@@ -173,8 +189,8 @@ public class TheObserver extends UntypedActor {
 
         long staleness = lastDelta.getUpdateTimestamp() - oldest.getN();
 
-        if (staleness > maxStale[ts])
-            maxStale[ts] = staleness;
+        if (staleness > maxStalePerProcess.get(ts).get(process))
+            maxStalePerProcess.get(ts).set(process, staleness);
     }
 
     private void computeNumStale() {

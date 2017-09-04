@@ -74,7 +74,7 @@ public class Participant extends UntypedActor{
         logger.info("Setup completed for node " + id);
 
         for (int i = id * tuplesNumber; i < (id + 1) * tuplesNumber; i++) {
-            observer.tell(new ObserverUpdate(this.id, 0, storage.getParticipantStates().get(i), true), getSelf());
+            observer.tell(new ObserverUpdate(this.id, 0, storage.getParticipantStates(), true, System.currentTimeMillis()), getSelf());
         }
 
         scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
@@ -156,13 +156,13 @@ public class Participant extends UntypedActor{
     protected void gossipMessage(GossipMessage message){
         if (message.isSender()) {
             ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
             logger.info("Gossip exchange with node " + sender() + " completed");
         } else {
             // second phase, receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()){ // this is the message with deltas
                 ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
             }else{ // digest message to respond to
                 // send to q last message of exchange with deltas.
                 getSender().tell(new GossipMessage(true, storage.computeDifferences(message.getParticipantStates())), self());
@@ -174,10 +174,13 @@ public class Participant extends UntypedActor{
     private void update() {
         String newValue = Utilities.getRandomNum(0, 1000).toString();
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);  // inclusive range
-        Delta update = storage.update(keyToBeUpdated, newValue);
+
+        // need an ArrayList to avoid unnecessary complexity in Observer class
+        ArrayList<Delta> update = new ArrayList<>();
+        update.add(storage.update(keyToBeUpdated, newValue));
 
         // send update to Observer
-        observer.tell(new ObserverUpdate(this.id, this.current_timestep, update, true), getSelf());
+        observer.tell(new ObserverUpdate(this.id, this.current_timestep, update, true, System.currentTimeMillis()), getSelf());
 
         if (this.updateRate != 0)
             scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);
