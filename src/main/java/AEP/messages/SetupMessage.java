@@ -25,6 +25,7 @@ public class SetupMessage implements Serializable {
     private int phi2;
     boolean flow_control;
     ActorRef observer;
+    private int chosenProcess;
 
 
     public SetupMessage(int tuplesNumber, List participants) {
@@ -32,7 +33,7 @@ public class SetupMessage implements Serializable {
         ps = participants;
     }
 
-    public SetupMessage(int tuplesNumber, List<ActorRef> ps, List<Integer> mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta, Ordering ordering, int phi1, int phi2, boolean flow_control, ActorRef observer) {
+    public SetupMessage(int tuplesNumber, List<ActorRef> ps, List<Integer> mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta, Ordering ordering, int phi1, int phi2, boolean flow_control, ActorRef observer, int chosenProcess) {
         this.tuplesNumber = tuplesNumber;
         this.ps = ps;
         this.mtu = mtu;
@@ -46,6 +47,7 @@ public class SetupMessage implements Serializable {
         this.phi2 = phi2;
         this.flow_control = flow_control;
         this.observer = observer;
+        this.chosenProcess = chosenProcess;
     }
 
     public int getTuplesNumber() {
@@ -98,5 +100,9 @@ public class SetupMessage implements Serializable {
 
     public ActorRef getObserver() {
         return observer;
+    }
+
+    public int getChosenProcess() {
+        return chosenProcess;
     }
 }

@@ -1,6 +1,7 @@
 package AEP;
 
 import AEP.messages.ObserverUpdate;
+import AEP.messages.ObserverUpdateRate;
 import AEP.messages.SetupMessage;
 import AEP.nodeUtilities.Delta;
 import AEP.nodeUtilities.Utilities;
@@ -28,15 +29,20 @@ public class TheObserver extends UntypedActor {
     private long[] maxStale;
     private int[] numStale;
 
+    // keep track of the updateRate used by a chosen process at each time step
+    private float[] updateRates;
+
     private void initializeObserved(SetupMessage message) {
         this.tuplesNumber = message.getTuplesNumber();
         this.participantNumber = message.getPs().size();
         this.finalTimestep = message.getTimesteps().get(message.getTimesteps().size()-1);
         this.timesteps = message.getTimesteps().get(message.getTimesteps().size()-1);
         this.pathname = message.getStoragePath();
+        this.historyProcess = message.getChosenProcess();
         this.maxStale = new long[timesteps];
         this.numStale = new int[timesteps];
-        this.historyProcess = Utilities.getRandomNum(0, participantNumber-1);
+        this.updateRates = new float[timesteps];
+        System.out.println("Observer chosen participant: " + this.historyProcess);
 
         this.history = new ArrayList<>();
         for (int i = 0; i < timesteps; i++) {
@@ -45,6 +51,16 @@ public class TheObserver extends UntypedActor {
                 process.add(new ArrayList<>());
             }
             this.history.add(process);
+        }
+    }
+
+    private void saveUpdateRate(ObserverUpdateRate message){
+        // TODO: now we check here for adding just the chosen process. We should do it from the actors perspective.
+        if (message.getId() == this.historyProcess){
+            // for now we take a very simple approach: just save the incoming updateRate in the
+            // given time step. Possible drawback: A single node changes its UR multiple times
+            // in a single ts, so we may have to average this URs to get a precise measurement.
+            this.updateRates[message.getTimestep()] = message.getUpdateRate();
         }
     }
 
@@ -188,6 +204,10 @@ public class TheObserver extends UntypedActor {
         for (int i = 0; i < numStale.length; i++) {
             sb.append(numStale[i]).append(" ");
         }
+        sb.append("\n");
+        for (int i = 0; i < updateRates.length; i++) {
+            sb.append(updateRates[i]).append(" ");
+        }
         return sb.toString();
     }
 
@@ -213,6 +233,8 @@ public class TheObserver extends UntypedActor {
             case "ObserverUpdate": // initialization message
                 update((ObserverUpdate) message);
                 break;
+            case "ObserverUpdateRate":
+                saveUpdateRate((ObserverUpdateRate) message);
         }
     }
 }

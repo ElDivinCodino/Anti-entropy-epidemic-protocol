@@ -83,7 +83,7 @@ public class PreciseParticipant extends Participant {
         // p sent to q the updates
         if (message.isSender()) {
             ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
 
             if (this.flow_control) {
                 // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
@@ -109,7 +109,7 @@ public class PreciseParticipant extends Participant {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
                 ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false), getSelf());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
 
                 logger.info("Gossip completed");
             } else { // digest message to respond to

@@ -27,6 +27,7 @@ public class Participant extends UntypedActor{
     protected List<ActorRef> ps;
     protected int tuplesNumber;
     protected int id;
+    protected int chosenProcess;
 
     protected float updateRate = 1;
     // used in FC classes
@@ -61,6 +62,7 @@ public class Participant extends UntypedActor{
         this.updaterates = message.getUpdaterates();
         this.flow_control = message.isFlow_control();
         assert timesteps.size() == updaterates.size();
+        this.chosenProcess = message.getChosenProcess();
 
         // get the first update rate
         this.updateRate = this.updaterates.get(0);
@@ -107,6 +109,11 @@ public class Participant extends UntypedActor{
                 scheduleUpdateTimeout(Math.round(1000/updateRate), TimeUnit.MILLISECONDS);
             }
             changeMTU();
+
+            // TODO: we send here the current UR. It should be enough to send it here. If there was no change
+            // from the configuration file then the UR will just be the value obtained by flow control calculations
+            System.out.println("Participant: " + this.id + "   updateRate:" + this.updateRate);
+            this.observer.tell(new ObserverUpdateRate(this.id, this.current_timestep, this.updateRate), getSelf());
 
             logger.debug("Update rate changed to " + this.updateRate + " for p " + this.id);
             this.current_timestep_index++;

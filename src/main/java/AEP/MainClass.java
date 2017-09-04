@@ -62,6 +62,9 @@ public class MainClass {
         List<Integer> updaterates = myConfig.getIntList("aep.execution.updaterates");
         List<Integer> mtu = myConfig.getIntList("aep.execution.mtu");
 
+        // choose a random Participant from which to log operations
+        int historyProcess = Utilities.getRandomNum(0, participants - 1);
+
         try {
             localIP = InetAddress.getLocalHost().getHostAddress();
         } catch (Exception e) {
@@ -116,10 +119,10 @@ public class MainClass {
         }
 
         // send first setup message to observer
-        observer.tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + "observer.txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, null), null);
+        observer.tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + "observer.txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, null, participants), null);
         for (int i = 0; i < ps.size(); i++) {
             participantName = "Participant_" + i;
-            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName + ".txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, observer), null);
+            ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName + ".txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, observer, participants), null);
         }
 
     }
