@@ -85,7 +85,11 @@ public class Participant extends UntypedActor{
     protected void increaseTimeStep(){
         // increase time counter
         this.current_timestep++;
-        System.out.println("current_timestep " + this.current_timestep);
+        if (this.chosenProcess == this.id) {
+            System.out.println("current_timestep " + this.current_timestep);
+        }
+//        System.out.println("chose process: " + this.chosenProcess);
+
         // if this is the last timestep, stop the experiment
         if (this.current_timestep == this.timesteps.get(this.timesteps.size()-1)){
             logger.info("End of experiment for Participant " + this.id);
@@ -110,13 +114,14 @@ public class Participant extends UntypedActor{
             }
             changeMTU();
 
-            // TODO: we send here the current UR. It should be enough to send it here. If there was no change
-            // from the configuration file then the UR will just be the value obtained by flow control calculations
-            System.out.println("Participant: " + this.id + "   updateRate:" + this.updateRate);
-            this.observer.tell(new ObserverUpdateRate(this.id, this.current_timestep, this.updateRate), getSelf());
-
             logger.debug("Update rate changed to " + this.updateRate + " for p " + this.id);
             this.current_timestep_index++;
+        }
+
+        // from the configuration file then the UR will just be the value obtained by flow control calculations
+        if (this.chosenProcess == this.id){
+            System.out.println("Participant: " + this.id + "   updateRate:" + this.updateRate);
+            this.observer.tell(new ObserverUpdateRate(this.id, this.current_timestep, this.updateRate), getSelf());
         }
     }
 
