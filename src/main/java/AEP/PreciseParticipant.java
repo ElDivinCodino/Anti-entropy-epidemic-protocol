@@ -61,7 +61,7 @@ public class PreciseParticipant extends Participant {
     }
 
     protected void changeMTU(){
-        if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
+        if (this.current_timestep_index < mtuArray.size() && this.current_timestep == this.timesteps.get(this.current_timestep_index)){
             this.mtu = this.mtuArray.get(this.current_timestep_index);
             if (this.id == this.chosenProcess) {
                 System.out.println("MTU changed to " + this.mtu);
@@ -84,8 +84,11 @@ public class PreciseParticipant extends Participant {
     protected void gossipMessage(GossipMessage message){
         // p sent to q the updates
         if (message.isSender()) {
-            ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
+
+            synchronized (this) {
+                ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
+            }
 
             if (this.flow_control) {
                 // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
@@ -110,8 +113,11 @@ public class PreciseParticipant extends Participant {
         } else {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
-                ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
+
+                synchronized (this) {
+                    ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+                    observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
+                }
 
                 logger.info("Gossip completed");
             } else { // digest message to respond to

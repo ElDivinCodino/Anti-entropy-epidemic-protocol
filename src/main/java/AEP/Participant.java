@@ -57,8 +57,6 @@ public class Participant extends UntypedActor{
         this.ps = message.getPs();
         this. storage = new Storage(message.getStoragePath(), ps.size(), tuplesNumber, id, logger);
         this.timesteps = message.getTimesteps();
-        // give the observer time to compute history and save results. ¯\_(ツ)_/¯
-        this.timesteps.set(this.timesteps.size()-1, this.timesteps.get(this.timesteps.size()-1) + 5);
         this.updaterates = message.getUpdaterates();
         this.flow_control = message.isFlow_control();
         assert timesteps.size() == updaterates.size();
@@ -73,9 +71,8 @@ public class Participant extends UntypedActor{
         increaseTimeStep();
         logger.info("Setup completed for node " + id);
 
-        for (int i = id * tuplesNumber; i < (id + 1) * tuplesNumber; i++) {
-            observer.tell(new ObserverUpdate(this.id, 0, storage.getParticipantStates(), true, System.currentTimeMillis()), getSelf());
-        }
+        ArrayList<Delta> initialList = new ArrayList<>(storage.getParticipantStates().subList(id * tuplesNumber, (id + 1) * tuplesNumber));
+        observer.tell(new ObserverUpdate(this.id, 0, initialList, true, System.currentTimeMillis()), getSelf());
 
         scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
         if (this.updateRate != 0)
@@ -96,7 +93,7 @@ public class Participant extends UntypedActor{
 //            context().system().terminate();
         }
         // if there is a change in the update rate
-        if (this.current_timestep == this.timesteps.get(this.current_timestep_index)){
+        if (this.current_timestep_index < this.timesteps.size() && this.current_timestep == this.timesteps.get(this.current_timestep_index)){
             float prev = this.updateRate;
             if (flow_control){
                 this.desiredUR = this.updaterates.get(this.current_timestep_index);
@@ -141,7 +138,11 @@ public class Participant extends UntypedActor{
 
         q.tell(new StartGossip(storage.createDigest()), self());
         logger.info("Timeout: sending StartGossip to " + q);
-        scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
+        if (this.current_timestep != this.timesteps.get(this.timesteps.size()-1)) {
+            scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
+        } else {
+            System.out.println("stopped process " + this.id);
+        }
     }
 
     /**

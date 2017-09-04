@@ -8,9 +8,7 @@ import akka.actor.UntypedActor;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 /**
@@ -78,25 +76,20 @@ public class TheObserver extends UntypedActor {
             saveAndKill();
         }
 
-        this.history.get(ts).get(id).addAll(updates);
         for(Delta d : updates) {
             d.setUpdateTimestamp(timestamp);
+            this.history.get(ts).get(id).add(d);
         }
-
     }
 
     private void saveAndKill(){
 
-        System.out.println("Computing maxStalenes...");
         computeMaxStale();
 
-        System.out.println("Computing numStalenes...");
         computeNumStale();
 
-        System.out.println("Saving...");
         save();
 
-        System.out.println("Shutting down...");
         context().system().terminate();
     }
 
@@ -119,7 +112,7 @@ public class TheObserver extends UntypedActor {
                     }
                 }
 
-                for (Delta d : this.history.get(i).get(p)) {
+                for (Delta d : getLocals(this.history.get(i).get(p), p, false)) {
                     // if d is the last update done by d.getP at time step i
                     // TODO: tmp.contains(d) > non dovrebbe essere ovvio?
                     if (tmp.contains(d) && isTheLastOne(d, tmp)) {
@@ -180,17 +173,20 @@ public class TheObserver extends UntypedActor {
     // takes the new non-stale Delta, and search for the last non-stale Delta to compute the staleness between them
     private void computeStale(int process, int ts, Delta lastDelta, ArrayList<Delta> updates) {
         // oldest will be the last non-stale update among all the updates for the same key
-        Delta oldest = new Delta(lastDelta.getP(), lastDelta.getK(), lastDelta.getV(), lastDelta.getN());  // TODO: possiamo rimuovere oldest ed usare direttamente lastDelta?
+        Delta oldest = new Delta(lastDelta.getP(), lastDelta.getK(), lastDelta.getV(), lastDelta.getN());
+        oldest.setUpdateTimestamp(lastDelta.getUpdateTimestamp());
 
         for(Delta oldDeltas : updates) {
             if(oldDeltas.getP() == lastDelta.getP() && oldDeltas.getK() == lastDelta.getK() && oldDeltas.getN() < oldest.getN())
                 oldest = oldDeltas;
         }
 
-        long staleness = lastDelta.getUpdateTimestamp() - oldest.getN();
+        long staleness = lastDelta.getUpdateTimestamp() - oldest.getUpdateTimestamp();
 
-        if (staleness > maxStalePerProcess.get(ts).get(process))
+        if (staleness > maxStalePerProcess.get(ts).get(process)) {
             maxStalePerProcess.get(ts).set(process, staleness);
+        }
+
     }
 
     private void computeNumStale() {
@@ -198,7 +194,7 @@ public class TheObserver extends UntypedActor {
         for (int i = 0; i < history.size(); i++) {
             for (int j = 0; j < history.get(i).size(); j++) {
                 if (j != this.historyProcess){
-                    tmp.addAll(this.history.get(i).get(j));
+                    tmp.addAll(getLocals(this.history.get(i).get(j), j, true));
                 }
             }
 
@@ -206,7 +202,7 @@ public class TheObserver extends UntypedActor {
             // reconciled updates happened at historyProcess participant
             // In this way we leave inside tmp just the local updates that were
             // not propagated to historyProcess participant.
-            tmp.removeAll(this.history.get(i).get(this.historyProcess));
+            tmp.removeAll(getLocals(this.history.get(i).get(this.historyProcess), this.historyProcess, false));
             numStale[i] = tmp.size();
         }
     }

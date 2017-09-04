@@ -35,8 +35,13 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
         logger.debug("P " + this.id + " starts gossip with P " + rndId);
 
         q.tell(new StartGossip(storage.createScuttlebuttDigest()), self());
-        logger.info("Timeout: sending StartGossip to " + q);
-        scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
+
+        if (this.current_timestep != this.timesteps.get(this.timesteps.size()-1)) {
+            logger.info("Timeout: sending StartGossip to " + q);
+            scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
+        } else {
+            System.out.println("stopped process " + this.id);
+        }
     }
 
     protected void startGossip(StartGossip message){

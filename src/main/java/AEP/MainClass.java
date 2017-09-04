@@ -120,6 +120,7 @@ public class MainClass {
 
         // send first setup message to observer
         observer.tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + "observer.txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, null, historyProcess), null);
+
         for (int i = 0; i < ps.size(); i++) {
             participantName = "Participant_" + i;
             ps.get(i).tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + participantName + ".txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, observer, historyProcess), null);
