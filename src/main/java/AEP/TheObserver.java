@@ -8,6 +8,7 @@ import akka.actor.UntypedActor;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.TreeMap;
@@ -68,7 +69,7 @@ public class TheObserver extends UntypedActor {
         }
     }
 
-    private void update(ObserverUpdate message) {
+    private synchronized void update(ObserverUpdate message) {
         Integer id = message.getId();
         ArrayList<Delta> updates = message.getUpdates();
         Integer ts = message.getTimestep();
@@ -80,7 +81,8 @@ public class TheObserver extends UntypedActor {
 
         for(Delta d : updates) {
             d.setUpdateTimestamp(timestamp);
-            this.history.get(ts).get(id).add(d);
+            if (!this.history.get(ts).get(id).contains(d))
+                this.history.get(ts).get(id).add(d);
         }
     }
 
@@ -115,6 +117,19 @@ public class TheObserver extends UntypedActor {
         return localDeltas;
     }
 
+
+    private void removeDelta(ArrayList<Delta> deltas, Integer p, Integer k) {
+        int toRemove = -1;
+        for (int i = 0; i < deltas.size(); i++) {
+            if (deltas.get(i).getP() == p && deltas.get(i).getK() == k){
+                toRemove = i;
+            }
+        }
+        if (toRemove != -1) {
+            deltas.remove(toRemove);
+        }
+    }
+
     private void computeNumStale(Integer mainProcess) {
 
         // a map that keeps track of the stale deltas present in the historyProcess
@@ -133,6 +148,21 @@ public class TheObserver extends UntypedActor {
             for (int j = 0; j < history.get(i).size(); j++) {
                 if (j != mainProcess){
                     tmp.addAll(getLocals(this.history.get(i).get(j), j, true));
+                    // add all elements from local updates, but check that there is not already an older local update with same p and k
+//                    for (Delta d : getLocals(this.history.get(i).get(j), j, true)){
+//                        // remove old update if exists
+//                        removeDelta(tmp, d.getP(), d.getK());
+//                        // add new local update with same p and k
+//                        tmp.add(d);
+//
+//                    }
+                    for(Delta d : getLocals(this.history.get(i).get(j), j, true)) {
+                        for(int k = 0; k < tmp.size(); k++) {
+                            if(tmp.get(k).getP() == d.getP() && tmp.get(k).getK() == d.getK() && tmp.get(k).getN() != d.getN()) {
+                                tmp.remove(k);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -164,10 +194,13 @@ public class TheObserver extends UntypedActor {
             */
             for (Delta d : tmp) {
                 if (maxStaleCounter.get(d.getP()).containsKey(d.getK())){  // increase staleness of this key
-                    maxStaleCounter.get(d.getP()).put(d.getK(), maxStaleCounter.get(d.getP()).get(d.getK()) + 1);
+//                    maxStaleCounter.get(d.getP()).put(d.getK(), maxStaleCounter.get(d.getP()).get(d.getK()) + 1);
                 } else {
-                    maxStaleCounter.get(d.getP()).put(d.getK(), 1);
+                    maxStaleCounter.get(d.getP()).put(d.getK(), 0);
                 }
+            }
+            for (Integer key : maxStaleCounter.keySet()){
+                maxStaleCounter.get(key).replaceAll((k, v) -> v + 1);
             }
 
             // now get the maximum value in the treeMap and elect that kay as maximum stale
