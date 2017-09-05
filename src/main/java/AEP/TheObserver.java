@@ -128,6 +128,7 @@ public class TheObserver extends UntypedActor {
 
         ArrayList<Delta> tmp = new ArrayList<>();
 
+        // ts loop
         for (int i = 0; i < history.size(); i++) {
             for (int j = 0; j < history.get(i).size(); j++) {
                 if (j != mainProcess){

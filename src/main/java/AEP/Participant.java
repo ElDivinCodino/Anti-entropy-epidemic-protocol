@@ -117,7 +117,7 @@ public class Participant extends UntypedActor{
 
         // from the configuration file then the UR will just be the value obtained by flow control calculations
         if (this.chosenProcess == this.id && this.current_timestep < this.timesteps.get(this.timesteps.size() - 1)){
-            System.out.println("Participant: " + this.id + "   updateRate:" + this.updateRate);
+            System.out.println("Participant: " + this.id + "   updateRate: " + this.updateRate);
             this.observer.tell(new ObserverUpdateRate(this.id, this.current_timestep, this.updateRate), getSelf());
         }
     }
