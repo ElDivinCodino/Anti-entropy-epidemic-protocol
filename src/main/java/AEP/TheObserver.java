@@ -8,10 +8,10 @@ import akka.actor.UntypedActor;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.TreeMap;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 /**
  * Created by StefanoFiora on 30/08/2017.
@@ -28,12 +28,13 @@ public class TheObserver extends UntypedActor {
 
     // these array lists are #timesteps long
     private ArrayList<ArrayList<Integer>> maxStalePerProcess;
-    private ArrayList<ArrayList<Integer>> numStalePerProcess;
     private int[] maxStale;
     private int[] numStale;
 
     // keep track of the updateRate used by a chosen process at each time step
     private float[] updateRates;
+
+    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
 
     private void initializeObserved(SetupMessage message) {
         this.participantNumber = message.getPs().size();
@@ -73,14 +74,15 @@ public class TheObserver extends UntypedActor {
         Integer id = message.getId();
         ArrayList<Delta> updates = message.getUpdates();
         Integer ts = message.getTimestep();
-        long timestamp = message.getTimestamp();
 
         if (ts == this.finalTimestep) {
             saveAndKill();
         }
 
+
+        System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": Storing " + updates + " from " + id);
+
         for(Delta d : updates) {
-            d.setUpdateTimestamp(timestamp);
             if (!this.history.get(ts).get(id).contains(d))
                 this.history.get(ts).get(id).add(d);
         }
@@ -117,19 +119,6 @@ public class TheObserver extends UntypedActor {
         return localDeltas;
     }
 
-
-    private void removeDelta(ArrayList<Delta> deltas, Integer p, Integer k) {
-        int toRemove = -1;
-        for (int i = 0; i < deltas.size(); i++) {
-            if (deltas.get(i).getP() == p && deltas.get(i).getK() == k){
-                toRemove = i;
-            }
-        }
-        if (toRemove != -1) {
-            deltas.remove(toRemove);
-        }
-    }
-
     private void computeNumStale(Integer mainProcess) {
 
         // a map that keeps track of the stale deltas present in the historyProcess
@@ -148,32 +137,40 @@ public class TheObserver extends UntypedActor {
             for (int j = 0; j < history.get(i).size(); j++) {
                 if (j != mainProcess){
                     tmp.addAll(getLocals(this.history.get(i).get(j), j, true));
-                    // add all elements from local updates, but check that there is not already an older local update with same p and k
-//                    for (Delta d : getLocals(this.history.get(i).get(j), j, true)){
-//                        // remove old update if exists
-//                        removeDelta(tmp, d.getP(), d.getK());
-//                        // add new local update with same p and k
-//                        tmp.add(d);
-//
-//                    }
-                    for(Delta d : getLocals(this.history.get(i).get(j), j, true)) {
-                        for(int k = 0; k < tmp.size(); k++) {
-                            if(tmp.get(k).getP() == d.getP() && tmp.get(k).getK() == d.getK() && tmp.get(k).getN() != d.getN()) {
-                                tmp.remove(k);
-                            }
-                        }
-                    }
                 }
             }
 
-            ArrayList<Delta> inter = intersection(tmp, getLocals(this.history.get(i).get(mainProcess), mainProcess, false));
+            ArrayList<Delta> reconc = getLocals(this.history.get(i).get(mainProcess), mainProcess, false);
+            ArrayList<Delta> inter = intersection(tmp, reconc);
+            ArrayList<Delta> cose = intersection(tmp, reconc);
 
+            assert inter.size() >= new HashSet<>(inter).size();
+
+            int size = tmp.size();
             // we remove from all the local updates of timestep ts the
             // reconciled updates happened at historyProcess participant
             // In this way we leave inside tmp just the local updates that were
             // not propagated to historyProcess participant.
-            boolean changed = tmp.removeAll(getLocals(this.history.get(i).get(mainProcess), mainProcess, false));  // returns true if the operation changes the list
-            numStale[i] = tmp.size();
+
+            cose.removeAll(tmp);
+            if (cose.size() != 0)
+                System.out.println("Ciao mamma!");
+
+            boolean changed = tmp.removeAll(inter);  // returns true if the operation changes the list
+
+            assert size == (tmp.size() + inter.size());
+
+            if (numStale[i] < tmp.size()) // we take the maximum numStale among all the participant, for the same ts
+                numStale[i] = tmp.size();
+            // TODO: tieni solo numStale di un singolo processo, non il max fra tutti
+
+            if(i == 64 && tmp.size() > 0){
+                for (Delta y: tmp
+                     ) {
+                    System.out.println(mainProcess + " STRONZO " + y);
+                }
+
+            }
 
             // first we need to remove from the tree map the Deltas that have been reconciled
             if (changed) { // otherwise we don't even bother
@@ -182,12 +179,10 @@ public class TheObserver extends UntypedActor {
                         maxStaleCounter.get(d.getP()).remove(d.getK());
                     }
                 }
-            }else{
-                assert inter.size() == 0;
             }
 
             /*
-             tmp contains now the deltas that are stale in process hitoryPrcess at timestep i
+             tmp contains now the deltas that are stale in process historyProcess at timestep i
              so now we can do two things:
                 - if the delta was stale at previous ts, then it is already present in the treemap and we increase the counter
                 - if the delta was not stale before, then we insert the key in the treemap
@@ -203,7 +198,7 @@ public class TheObserver extends UntypedActor {
                 maxStaleCounter.get(key).replaceAll((k, v) -> v + 1);
             }
 
-            // now get the maximum value in the treeMap and elect that kay as maximum stale
+            // now get the maximum value in the treeMap and elect that key as maximum stale
             ArrayList<Integer> maxes = new ArrayList<>();
             for (int j = 0; j < participantNumber; j++) {
                 if (maxStaleCounter.get(j).size() > 0){
@@ -220,11 +215,26 @@ public class TheObserver extends UntypedActor {
 
     public ArrayList<Delta> intersection(ArrayList<Delta> list1, ArrayList<Delta> list2) {
         ArrayList<Delta> list = new ArrayList<>();
+        ArrayList<Delta> toBeAdded;
+        boolean newest;
 
-        for (Delta t : list1) {
-            if(list2.contains(t)) {
-                list.add(t);
+        // should take only the ones which stop the staleness (i.e. are the newest)!
+        for (Delta d2 : list2) {
+            newest = true;
+            toBeAdded = new ArrayList<>();
+
+            for(Delta d1 : list1) {
+                if (d1.getP() == d2.getP() && d1.getK() == d2.getK()) {
+                    if(d1.getN() > d2.getN()) {
+                        newest = false;
+                        break;
+                    } else {
+                        toBeAdded.add(d1);
+                    }
+                }
             }
+            if (newest)
+                list.addAll(toBeAdded);
         }
 
         return list;

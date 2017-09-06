@@ -11,7 +11,6 @@ public class Delta implements Serializable{
     private int k;
     private String v;
     private long n;
-    private long updateTimestamp;
 
     /**
      * @param value the v of the key
@@ -74,22 +73,25 @@ public class Delta implements Serializable{
                 '}';
     }
 
-    public long getUpdateTimestamp() {
-        return updateTimestamp;
-    }
-
-    public void setUpdateTimestamp(long updateTimestamp) {
-        this.updateTimestamp = updateTimestamp;
-    }
-
-
     @Override
     public boolean equals(Object o) {
-        Delta d = (Delta)o;
-        return ((Integer)this.getP()).equals(d.getP())
-                && ((Integer)this.getK()).equals(d.getK())
-                && (this.getV()).equals(d.getV())
-                && ((Long)this.getN()).equals(d.getN());
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
+        Delta delta = (Delta) o;
+
+        if (p != delta.p) return false;
+        if (k != delta.k) return false;
+        if (n != delta.n) return false;
+        return v.equals(delta.v);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = p;
+        result = 31 * result + k;
+        result = 31 * result + v.hashCode();
+        result = 31 * result + (int) (n ^ (n >>> 32));
+        return result;
     }
 }

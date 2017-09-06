@@ -8,16 +8,18 @@ import AEP.nodeUtilities.CustomLogger;
 import AEP.nodeUtilities.Delta;
 import akka.actor.ActorRef;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.TreeMap;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Created by StefanoFiora on 28/08/2017.
  */
 public class PreciseParticipant extends Participant {
+
+    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
 
     // Maximum Transfer Unit: maximum number of deltas inside a single gossip message
     protected int mtu;
@@ -35,6 +37,9 @@ public class PreciseParticipant extends Participant {
 
     private float alpha;
     private float beta;
+
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+
     // ----------------------
 
     public PreciseParticipant(int id, CustomLogger.LOG_LEVEL level) {
@@ -85,10 +90,12 @@ public class PreciseParticipant extends Participant {
         // p sent to q the updates
         if (message.isSender()) {
 
-            synchronized (this) {
-                ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
-            }
+            ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+            // send all the new information to the observer only once
+            reconciled.addAll(localUpdate);
+            localUpdate.clear();
+            System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
 
             if (this.flow_control) {
                 // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
@@ -116,7 +123,12 @@ public class PreciseParticipant extends Participant {
 
                 synchronized (this) {
                     ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-                    observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
+                    // send all the new information to the observer only once
+                    reconciled.addAll(localUpdate);
+                    localUpdate.clear();
+
+                    System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
+                    observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
                 }
 
                 logger.info("Gossip completed");

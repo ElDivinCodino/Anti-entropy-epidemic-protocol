@@ -62,7 +62,10 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
             logger.info("Fourth phase: reconciling and sending differences to " + getSender());
 
             ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
+            // send all the new information to the observer only once
+            reconciled.addAll(localUpdate);
+            localUpdate.clear();
+            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
 
             if (this.flow_control) {
                 // get the new maximum update rate computed at node p
@@ -83,7 +86,10 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
                 ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled, false, System.currentTimeMillis()), getSelf());
+                // send all the new information to the observer only once
+                reconciled.addAll(localUpdate);
+                localUpdate.clear();
+                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
 
                 logger.info("Reconciliation... Gossip completed");
             } else { // digest message to respond to
