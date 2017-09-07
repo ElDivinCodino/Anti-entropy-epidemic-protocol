@@ -8,7 +8,7 @@ import java.util.ArrayList;
 /**
  * Created by Francesco on 25/08/17.
  */
-public class GossipMessage implements Serializable{
+public final class GossipMessage implements Serializable{
 
 
     private boolean isSender;

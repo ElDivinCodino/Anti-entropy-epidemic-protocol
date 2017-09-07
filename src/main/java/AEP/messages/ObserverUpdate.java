@@ -8,7 +8,7 @@ import java.util.ArrayList;
 /**
  * Created by StefanoFiora on 30/08/2017.
  */
-public class ObserverUpdate implements Serializable {
+public final class ObserverUpdate implements Serializable {
 
     Integer id;
     Integer timestep;

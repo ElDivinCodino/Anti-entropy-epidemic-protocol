@@ -36,13 +36,17 @@ public class Participant extends UntypedActor{
 
     protected boolean flow_control;
 
+    protected ArrayList<ArrayList<Delta>> history;
+
     // experiment parameters
     int current_timestep;
     int current_timestep_index;
     List<Integer> timesteps;
     List<Integer> updaterates;
 
-    ArrayList<Delta> localUpdate = new ArrayList<>();
+    boolean stop = false;
+
+//    ArrayList<Delta> localUpdate = new ArrayList<>();
 
     public Participant(int id, CustomLogger.LOG_LEVEL level) {
         this.id = id;
@@ -66,6 +70,11 @@ public class Participant extends UntypedActor{
 
         // get the first update rate
         this.updateRate = this.updaterates.get(0);
+
+        this.history = new ArrayList<>();
+        for (int i = 0; i < this.timesteps.get(this.timesteps.size()-1); i++) {
+            this.history.add(new ArrayList<>());
+        }
     }
 
     private synchronized void setupMessage(SetupMessage message){
@@ -74,7 +83,9 @@ public class Participant extends UntypedActor{
         logger.info("Setup completed for node " + id);
 
         ArrayList<Delta> initialList = new ArrayList<>(storage.getParticipantStates().subList(id * tuplesNumber, (id + 1) * tuplesNumber));
-        observer.tell(new ObserverUpdate(this.id, 0, initialList), getSelf());
+//        observer.tell(new ObserverUpdate(this.id, 0, initialList), getSelf());
+        assert this.current_timestep == 0;
+        this.history.get(this.current_timestep).addAll(initialList);
 
         scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
         if (this.updateRate != 0)
@@ -93,6 +104,9 @@ public class Participant extends UntypedActor{
         if (this.current_timestep == this.timesteps.get(this.timesteps.size()-1)){
             logger.info("End of experiment for Participant " + this.id);
 //            context().system().terminate();
+            // Send to observer current history
+            observer.tell(new ObserverHistoryMessage(this.id, this.history), getSelf());
+            stop = true;
         }
         // if there is a change in the update rate
         if (this.current_timestep_index < this.timesteps.size() && this.current_timestep == this.timesteps.get(this.current_timestep_index)){
@@ -122,6 +136,9 @@ public class Participant extends UntypedActor{
             System.out.println("Participant: " + this.id + "   updateRate: " + this.updateRate);
             this.observer.tell(new ObserverUpdateRate(this.id, this.current_timestep, this.updateRate), getSelf());
         }
+        if (stop){
+            current_timestep--;
+        }
     }
 
     protected void changeMTU() {}
@@ -140,7 +157,7 @@ public class Participant extends UntypedActor{
 
         q.tell(new StartGossip(storage.createDigest()), self());
         logger.info("Timeout: sending StartGossip to " + q);
-        if (this.current_timestep != this.timesteps.get(this.timesteps.size()-1)) {
+        if (this.current_timestep != this.timesteps.get(this.timesteps.size()-1) && !this.stop) {
             scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
         } else {
             System.out.println("stopped process " + this.id);
@@ -165,18 +182,20 @@ public class Participant extends UntypedActor{
         if (message.isSender()) {
             ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
             // send all the new information to the observer only once
-            reconciled.addAll(localUpdate);
-            localUpdate.clear();
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
+//            reconciled.addAll(localUpdate);
+//            localUpdate.clear();
+            this.history.get(this.current_timestep).addAll(reconciled);
+//            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
             logger.info("Gossip exchange with node " + sender() + " completed");
         } else {
             // second phase, receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()){ // this is the message with deltas
                 ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
                 // send all the new information to the observer only once
-                reconciled.addAll(localUpdate);
-                localUpdate.clear();
-                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
+//                reconciled.addAll(localUpdate);
+//                localUpdate.clear();
+                this.history.get(this.current_timestep).addAll(reconciled);
+//                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
             }else{ // digest message to respond to
                 // send to q last message of exchange with deltas.
                 getSender().tell(new GossipMessage(true, storage.computeDifferences(message.getParticipantStates())), self());
@@ -189,10 +208,10 @@ public class Participant extends UntypedActor{
         String newValue = Utilities.getRandomNum(0, 1000).toString();
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);  // inclusive range
 
-        localUpdate.add(storage.update(keyToBeUpdated, newValue));
+        this.history.get(this.current_timestep).add(storage.update(keyToBeUpdated, newValue));
 
         // send update to Observer
-        observer.tell(new ObserverUpdate(this.id, this.current_timestep, localUpdate), getSelf());
+//        observer.tell(new ObserverUpdate(this.id, this.current_timestep, localUpdate), getSelf());
 
         if (this.updateRate != 0)
             scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);

@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Created by Francesco on 24/08/17.
  */
-public class SetupMessage implements Serializable {
+public final class SetupMessage implements Serializable {
 
     private int tuplesNumber;
     private List<ActorRef> ps;

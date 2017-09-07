@@ -8,7 +8,7 @@ import java.util.ArrayList;
 /**
  * Created by Francesco on 25/08/17.
  */
-public class StartGossip implements Serializable{
+public final class StartGossip implements Serializable{
 
     private ArrayList<Delta> participantStates;
 

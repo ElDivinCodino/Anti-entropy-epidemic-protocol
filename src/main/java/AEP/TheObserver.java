@@ -1,5 +1,6 @@
 package AEP;
 
+import AEP.messages.ObserverHistoryMessage;
 import AEP.messages.ObserverUpdate;
 import AEP.messages.ObserverUpdateRate;
 import AEP.messages.SetupMessage;
@@ -34,6 +35,8 @@ public class TheObserver extends UntypedActor {
     // keep track of the updateRate used by a chosen process at each time step
     private float[] updateRates;
 
+    private int countProcesses = 0;
+
     SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
 
     private void initializeObserved(SetupMessage message) {
@@ -60,6 +63,18 @@ public class TheObserver extends UntypedActor {
         }
     }
 
+    private synchronized void collectHistory(ObserverHistoryMessage message){
+        for (int i = 0; i < this.timesteps; i++) {
+            int currentP = message.getId();
+            this.history.get(i).get(currentP).addAll(message.getHistory().get(i));
+        }
+        this.countProcesses++;
+        if (countProcesses == this.participantNumber){
+            // start computing staleness
+            saveAndKill();
+        }
+    }
+
     private void saveUpdateRate(ObserverUpdateRate message){
         // TODO: now we check here for adding just the chosen process. We should do it from the actors perspective.
         if (message.getId() == this.historyProcess){
@@ -80,7 +95,7 @@ public class TheObserver extends UntypedActor {
         }
 
 
-        System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": Storing " + updates + " from " + id);
+//        System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": Storing " + updates + " from " + id);
 
         for(Delta d : updates) {
             if (!this.history.get(ts).get(id).contains(d))
@@ -130,7 +145,7 @@ public class TheObserver extends UntypedActor {
             maxStaleCounter.put(j, new TreeMap<>());
         }
 
-        ArrayList<Delta> tmp = new ArrayList<>();
+        HashSet<Delta> tmp = new HashSet<>();
 
         // ts loop
         for (int i = 0; i < history.size(); i++) {
@@ -140,9 +155,10 @@ public class TheObserver extends UntypedActor {
                 }
             }
 
-            ArrayList<Delta> reconc = getLocals(this.history.get(i).get(mainProcess), mainProcess, false);
-            ArrayList<Delta> inter = intersection(tmp, reconc);
-            ArrayList<Delta> cose = intersection(tmp, reconc);
+            HashSet<Delta> reconc = new HashSet<>();
+            reconc.addAll(getLocals(this.history.get(i).get(mainProcess), mainProcess, false));
+            HashSet<Delta> inter = intersection(tmp, reconc);
+
 
             assert inter.size() >= new HashSet<>(inter).size();
 
@@ -152,11 +168,8 @@ public class TheObserver extends UntypedActor {
             // In this way we leave inside tmp just the local updates that were
             // not propagated to historyProcess participant.
 
-            cose.removeAll(tmp);
-            if (cose.size() != 0)
-                System.out.println("Ciao mamma!");
 
-            boolean changed = tmp.removeAll(inter);  // returns true if the operation changes the list
+            boolean changed = tmp.removeAll(reconc);  // returns true if the operation changes the list
 
             assert size == (tmp.size() + inter.size());
 
@@ -164,7 +177,7 @@ public class TheObserver extends UntypedActor {
                 numStale[i] = tmp.size();
             // TODO: tieni solo numStale di un singolo processo, non il max fra tutti
 
-            if(i == 64 && tmp.size() > 0){
+            if(i == timesteps-1 && tmp.size() > 0){
                 for (Delta y: tmp
                      ) {
                     System.out.println(mainProcess + " STRONZO " + y);
@@ -213,28 +226,14 @@ public class TheObserver extends UntypedActor {
         }
     }
 
-    public ArrayList<Delta> intersection(ArrayList<Delta> list1, ArrayList<Delta> list2) {
-        ArrayList<Delta> list = new ArrayList<>();
-        ArrayList<Delta> toBeAdded;
-        boolean newest;
+    public HashSet<Delta> intersection(HashSet<Delta> list1, HashSet<Delta> list2) {
+        HashSet<Delta> list = new HashSet<>();
 
         // should take only the ones which stop the staleness (i.e. are the newest)!
         for (Delta d2 : list2) {
-            newest = true;
-            toBeAdded = new ArrayList<>();
-
-            for(Delta d1 : list1) {
-                if (d1.getP() == d2.getP() && d1.getK() == d2.getK()) {
-                    if(d1.getN() > d2.getN()) {
-                        newest = false;
-                        break;
-                    } else {
-                        toBeAdded.add(d1);
-                    }
-                }
+            if (list1.contains(d2)){
+                list.add(d2);
             }
-            if (newest)
-                list.addAll(toBeAdded);
         }
 
         return list;
@@ -276,10 +275,15 @@ public class TheObserver extends UntypedActor {
                 initializeObserved((SetupMessage) message);
                 break;
             case "ObserverUpdate": // initialization message
-                update((ObserverUpdate) message);
+//                update((ObserverUpdate) message);
+                assert false;
                 break;
             case "ObserverUpdateRate":
                 saveUpdateRate((ObserverUpdateRate) message);
+                break;
+            case "ObserverHistoryMessage":
+                collectHistory((ObserverHistoryMessage) message);
+                break;
         }
     }
 }

@@ -92,10 +92,11 @@ public class PreciseParticipant extends Participant {
 
             ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
             // send all the new information to the observer only once
-            reconciled.addAll(localUpdate);
-            localUpdate.clear();
-            System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
-            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
+//            reconciled.addAll(localUpdate);
+//            localUpdate.clear();
+            this.history.get(this.current_timestep).addAll(reconciled);
+//            System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
+//            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
 
             if (this.flow_control) {
                 // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
@@ -124,11 +125,11 @@ public class PreciseParticipant extends Participant {
                 synchronized (this) {
                     ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
                     // send all the new information to the observer only once
-                    reconciled.addAll(localUpdate);
-                    localUpdate.clear();
-
-                    System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
-                    observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
+//                    reconciled.addAll(localUpdate);
+//                    localUpdate.clear();
+                    this.history.get(this.current_timestep).addAll(reconciled);
+//                    System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
+//                    observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
                 }
 
                 logger.info("Gossip completed");

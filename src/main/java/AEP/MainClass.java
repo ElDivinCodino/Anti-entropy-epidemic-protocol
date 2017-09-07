@@ -73,10 +73,10 @@ public class MainClass {
 
         // Set up participant states and the actor system
 
-        Integer randomPort = Utilities.getRandomNum(10000, 10100);
-        Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + randomPort);
+//        Integer randomPort = Utilities.getRandomNum(10000, 10100);
+//        Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + randomPort);
 
-        ActorSystem system = ActorSystem.create("AEP", custom.withFallback(myConfig));
+        ActorSystem system = ActorSystem.create("AEP"/*, custom.withFallback(myConfig)*/);
 
         Class myClass = null;
         switch (mainClass) {
