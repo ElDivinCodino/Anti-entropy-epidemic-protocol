@@ -168,8 +168,20 @@ public class TheObserver extends UntypedActor {
             // In this way we leave inside tmp just the local updates that were
             // not propagated to historyProcess participant.
 
+            HashSet<Delta> toBeRemoved = new HashSet<>();
+            for (Delta d2 : reconc) {
+                for (Delta d1 : tmp) {
+                    if (d1.getP() == d2.getP() && d1.getV() == d2.getV() && d1.getN() <= d2.getN()) {
+                        toBeRemoved.add(d1);
+                    }
+                }
+            }
 
-            boolean changed = tmp.removeAll(reconc);  // returns true if the operation changes the list
+            if (i > 130 && tmp.size() > 0) {
+                System.out.println("c");
+            }
+
+            boolean changed = tmp.removeAll(toBeRemoved);  // returns true if the operation changes the list
 
             assert size == (tmp.size() + inter.size());
 

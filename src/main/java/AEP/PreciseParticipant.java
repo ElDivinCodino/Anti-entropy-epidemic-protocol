@@ -90,11 +90,11 @@ public class PreciseParticipant extends Participant {
         // p sent to q the updates
         if (message.isSender()) {
 
-            ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+            storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
             // send all the new information to the observer only once
 //            reconciled.addAll(localUpdate);
 //            localUpdate.clear();
-            this.history.get(this.current_timestep).addAll(reconciled);
+//            this.history.get(this.current_timestep).addAll(reconciled);
 //            System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
 //            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
 
@@ -123,11 +123,11 @@ public class PreciseParticipant extends Participant {
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
 
                 synchronized (this) {
-                    ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+                    storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
                     // send all the new information to the observer only once
 //                    reconciled.addAll(localUpdate);
 //                    localUpdate.clear();
-                    this.history.get(this.current_timestep).addAll(reconciled);
+//                    this.history.get(this.current_timestep).addAll(reconciled);
 //                    System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
 //                    observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
                 }

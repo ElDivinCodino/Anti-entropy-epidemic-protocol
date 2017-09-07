@@ -180,21 +180,23 @@ public class Participant extends UntypedActor{
 
     protected synchronized void gossipMessage(GossipMessage message){
         if (message.isSender()) {
-            ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+            storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
+
             // send all the new information to the observer only once
 //            reconciled.addAll(localUpdate);
 //            localUpdate.clear();
-            this.history.get(this.current_timestep).addAll(reconciled);
+//            this.history.get(this.current_timestep).addAll(reconciled);
 //            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
             logger.info("Gossip exchange with node " + sender() + " completed");
         } else {
             // second phase, receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()){ // this is the message with deltas
-                ArrayList<Delta> reconciled = storage.reconciliation(message.getParticipantStates());
+                storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
+
                 // send all the new information to the observer only once
 //                reconciled.addAll(localUpdate);
 //                localUpdate.clear();
-                this.history.get(this.current_timestep).addAll(reconciled);
+//                this.history.get(this.current_timestep).addAll(reconciled);
 //                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
             }else{ // digest message to respond to
                 // send to q last message of exchange with deltas.
@@ -208,7 +210,7 @@ public class Participant extends UntypedActor{
         String newValue = Utilities.getRandomNum(0, 1000).toString();
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);  // inclusive range
 
-        this.history.get(this.current_timestep).add(storage.update(keyToBeUpdated, newValue));
+        this.history.get(this.current_timestep).add(storage.update(keyToBeUpdated, newValue, this.current_timestep));
 
         // send update to Observer
 //        observer.tell(new ObserverUpdate(this.id, this.current_timestep, localUpdate), getSelf());

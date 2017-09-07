@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 # In[164]:
 
 precise_oldest = np.genfromtxt('../../logs/precise_oldest/observer.txt', delimiter=' ')
-#precise_newest = np.genfromtxt('../../logs/precise_newest/observer.txt', delimiter=' ')
-#scuttle_depth = np.genfromtxt('../../logs/scuttle_depth/observer.txt', delimiter=' ')
+precise_newest = np.genfromtxt('../../logs/precise_newest/observer.txt', delimiter=' ')
+scuttle_depth = np.genfromtxt('../../logs/scuttle_depth/observer.txt', delimiter=' ')
 #scuttle_breadth = np.genfromtxt('../../logs/scuttle_breadth/observer.txt', delimiter=' ')
 
 
@@ -68,9 +68,9 @@ def plot_thr(traces, path, x_lim=(0, 20), y_lim=(0, 3.5), dim=(15, 6), title="Fi
 # In[168]:
 
 traces = [
-    (precise_oldest[0], list(range(0, ts)), "precise_oldest", "x", "solid")
-    #(precise_newest[0], list(range(0, ts)), "precise-newest", "o", "solid"),
-    #(scuttle_depth[0], list(range(0, ts)), "scuttle_depth", "s", "solid"),
+    (precise_oldest[0], list(range(0, ts)), "precise_oldest", "x", "solid"),
+    (precise_newest[0], list(range(0, ts)), "precise-newest", "o", "solid"),
+    (scuttle_depth[0], list(range(0, ts)), "scuttle_depth", "s", "solid")
     #(scuttle_breadth[0], list(range(0, ts)), "scuttle_breadth", "d", "solid")
 ]
 plot_thr(traces, path="./max_staleness.pdf", x_lim=(0, ts), title="Max Staleness", y_lim = (0, 7000))
@@ -79,9 +79,9 @@ plot_thr(traces, path="./max_staleness.pdf", x_lim=(0, ts), title="Max Staleness
 # In[169]:
 
 traces = [
-    (precise_oldest[1], list(range(0, ts)), "precise_oldest", "x", "solid")
-    #(precise_newest[1], list(range(0, ts)), "precise-newest", "o", "solid"),
-    #(scuttle_depth[1], list(range(0, ts)), "scuttle_depth", "s", "solid"),
+    (precise_oldest[1], list(range(0, ts)), "precise_oldest", "x", "solid"),
+    (precise_newest[1], list(range(0, ts)), "precise-newest", "o", "solid"),
+    (scuttle_depth[1], list(range(0, ts)), "scuttle_depth", "s", "solid")
     #(scuttle_breadth[1], list(range(0, ts)), "scuttle_breadth", "d", "solid")
 ]
 plot_thr(traces, path="./num_staleness.pdf", x_lim=(0, ts), title="Num Staleness", y_lim = (0, 300))

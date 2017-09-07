@@ -40,9 +40,9 @@ public class Storage {
             for(int j = 0; j < p; j++) {
                 if (i == id) {
                     // t0 - j to maintain the invariant about the impossibility of having same version number for different keys in the same process
-                    tmp = new Delta(i, j, Utilities.getRandomNum(0, 1000).toString(), t0 - j);
+                    tmp = new Delta(i, j, Utilities.getRandomNum(0, 1000).toString(), t0 - j, 0);
                 } else {
-                    tmp = new Delta(i, j, null, 0);
+                    tmp = new Delta(i, j, null, 0, 0);
                 }
                 participantStates.add(tmp);
             }
@@ -52,12 +52,12 @@ public class Storage {
     }
 
 
-    public synchronized Delta update(int key, String value) {
-        Delta deltaToBeUpdated = participantStates.get((id * tuplesNumber) + key);
-        deltaToBeUpdated.setV(value);
-        deltaToBeUpdated.setN(System.currentTimeMillis());
+    public synchronized Delta update(int key, String value, int ts) {
+        Delta ref = participantStates.get((id * tuplesNumber) + key);
 
-        logger.debug("P " + id + " updated key " + key + " with v: " + value + " t: " + deltaToBeUpdated.getN());
+        Delta deltaToBeUpdated = new Delta(ref.getP(), ref.getK(), value, System.currentTimeMillis(), ts);
+
+        logger.debug("P " + id + " updated key " + key + " with v: " + value + " t: " + deltaToBeUpdated.getN() + "at time step " + ts);
 
         save();
         return deltaToBeUpdated;
@@ -70,7 +70,7 @@ public class Storage {
     public synchronized ArrayList<Delta> createDigest() {
         ArrayList<Delta> digest = new ArrayList<>();
         for (Delta d : this.participantStates){
-            digest.add(new Delta(d.getP(), d.getK(), null, d.getN()));
+            digest.add(new Delta(d.getP(), d.getK(), null, d.getN(), 0));
         }
         return digest;
     }
@@ -94,7 +94,7 @@ public class Storage {
                     key = participantStates.get(j).getK();
                 }
             }
-            digest.add(new Delta(i, key, null, higherVersion));
+            digest.add(new Delta(i, key, null, higherVersion, 0));
         }
         return digest;
     }
@@ -105,17 +105,23 @@ public class Storage {
      * @param peerStates a TreeMap which has null value if the participant should not be interested in updating that key,
      *                   or a new value with an higher version number instead
      */
-    public synchronized ArrayList<Delta> reconciliation (ArrayList<Delta> peerStates) {
-        ArrayList<Delta> reconciled = new ArrayList<>(); // to be sent to the observer
+    public synchronized void reconciliation (ArrayList<Delta> peerStates, ArrayList<ArrayList<Delta>> history, int currentTs) {
+        //ArrayList<Delta> reconciled = new ArrayList<>(); // to be sent to the observer
         logger.debug("Reconciliation peerStates:" + peerStates);
         for (Delta d : peerStates){
             for (int index = 0; index < this.participantStates.size(); index++) {
-                if (d.getP() == participantStates.get(index).getP() &&
-                        d.getK() == participantStates.get(index).getK() &&
-                        d.getN() > participantStates.get(index).getN()) {
+                if (d.getP() == participantStates.get(index).getP() && d.getK() == participantStates.get(index).getK() && d.getN() > participantStates.get(index).getN()) {
                     participantStates.get(index).setV(d.getV());
                     participantStates.get(index).setN(d.getN());
-                    reconciled.add(participantStates.get(index));
+                    participantStates.get(index).setTs(d.getTs());
+                    //reconciled.add(participantStates.get(index));
+
+                    if(d.getTs() > currentTs) {
+                        history.get(d.getTs()).add(d);
+                    } else {
+                        history.get(currentTs).add(d);
+                    }
+
                     // increase index of local state and exit current for loop
                     // to get the next delta
                     index = this.participantStates.size(); // exit inner loop
@@ -123,7 +129,7 @@ public class Storage {
             }
         }
         save();
-        return reconciled;
+        //return reconciled;
     }
 
     /**
@@ -161,7 +167,8 @@ public class Storage {
                             participantStates.get(index).getP(),
                             participantStates.get(index).getK(),
                             participantStates.get(index).getV(),
-                            participantStates.get(index).getN()));
+                            participantStates.get(index).getN(),
+                            participantStates.get(index).getTs()));
                     // increase index of local state and exit current for loop
                     // to get the next delta
                     index = this.participantStates.size(); // exit inner loop
@@ -189,7 +196,8 @@ public class Storage {
                             participantStates.get(index).getP(),
                             participantStates.get(index).getK(),
                             participantStates.get(index).getV(),
-                            participantStates.get(index).getN()));
+                            participantStates.get(index).getN(),
+                            participantStates.get(index).getTs()));
                 }
             }
         }

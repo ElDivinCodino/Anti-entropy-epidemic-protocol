@@ -5,26 +5,27 @@ import java.io.Serializable;
 /**
  * Created by StefanoFiora on 28/08/2017.
  */
-public class Delta implements Serializable{
+public final class Delta implements Serializable {
 
     private int p;
     private int k;
     private String v;
     private long n;
+    private int ts;
 
     /**
-     * @param value the v of the key
+     * @param value   the v of the key
      * @param version last n of the key
      */
-    public Delta(int process, int key, String value, long version) {
+    public Delta(int process, int key, String value, long version, int ts) {
         this.v = value;
         this.n = version;
         this.p = process;
         this.k = key;
+        this.ts = ts;
     }
 
     /**
-     *
      * @param v the new v that has to be assigned to the key
      */
     public void setV(String v) {
@@ -32,7 +33,6 @@ public class Delta implements Serializable{
     }
 
     /**
-     *
      * @param n the new n that has to be assigned to the key
      */
     public void setN(long n) {
@@ -40,7 +40,6 @@ public class Delta implements Serializable{
     }
 
     /**
-     *
      * @return the v of the key currently stored
      */
     public String getV() {
@@ -48,7 +47,6 @@ public class Delta implements Serializable{
     }
 
     /**
-     *
      * @return the n of the key currently stored
      */
     public long getN() {
@@ -62,6 +60,16 @@ public class Delta implements Serializable{
     public int getK() {
         return k;
     }
+
+    public int getTs() {
+        return ts;
+    }
+
+    public void setTs(int ts) {
+        this.ts = ts;
+    }
+
+
 
     @Override
     public String toString() {
