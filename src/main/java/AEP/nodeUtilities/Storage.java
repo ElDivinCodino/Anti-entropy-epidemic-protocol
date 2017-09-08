@@ -57,6 +57,8 @@ public class Storage {
 
         Delta deltaToBeUpdated = new Delta(ref.getP(), ref.getK(), value, System.currentTimeMillis(), ts);
 
+        participantStates.set(((id * tuplesNumber) + key), deltaToBeUpdated);
+
         logger.debug("P " + id + " updated key " + key + " with v: " + value + " t: " + deltaToBeUpdated.getN() + "at time step " + ts);
 
         save();
@@ -111,15 +113,14 @@ public class Storage {
         for (Delta d : peerStates){
             for (int index = 0; index < this.participantStates.size(); index++) {
                 if (d.getP() == participantStates.get(index).getP() && d.getK() == participantStates.get(index).getK() && d.getN() > participantStates.get(index).getN()) {
-                    participantStates.get(index).setV(d.getV());
-                    participantStates.get(index).setN(d.getN());
-                    participantStates.get(index).setTs(d.getTs());
-                    //reconciled.add(participantStates.get(index));
+
+                    Delta deltaToBeUpdated = new Delta(participantStates.get(index).getP(), participantStates.get(index).getK(), d.getV(), d.getN(), d.getTs());
+                    participantStates.set(index, deltaToBeUpdated);
 
                     if(d.getTs() > currentTs) {
-                        history.get(d.getTs()).add(d);
+                        history.get(d.getTs()).add(deltaToBeUpdated);
                     } else {
-                        history.get(currentTs).add(d);
+                        history.get(currentTs).add(deltaToBeUpdated);
                     }
 
                     // increase index of local state and exit current for loop

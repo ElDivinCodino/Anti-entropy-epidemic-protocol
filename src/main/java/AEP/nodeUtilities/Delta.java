@@ -26,20 +26,6 @@ public final class Delta implements Serializable {
     }
 
     /**
-     * @param v the new v that has to be assigned to the key
-     */
-    public void setV(String v) {
-        this.v = v;
-    }
-
-    /**
-     * @param n the new n that has to be assigned to the key
-     */
-    public void setN(long n) {
-        this.n = n;
-    }
-
-    /**
      * @return the v of the key currently stored
      */
     public String getV() {
@@ -64,12 +50,6 @@ public final class Delta implements Serializable {
     public int getTs() {
         return ts;
     }
-
-    public void setTs(int ts) {
-        this.ts = ts;
-    }
-
-
 
     @Override
     public String toString() {

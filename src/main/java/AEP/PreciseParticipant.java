@@ -1,7 +1,6 @@
 package AEP;
 
 import AEP.messages.GossipMessage;
-import AEP.messages.ObserverUpdate;
 import AEP.messages.SetupMessage;
 import AEP.messages.StartGossip;
 import AEP.nodeUtilities.CustomLogger;
@@ -9,8 +8,6 @@ import AEP.nodeUtilities.Delta;
 import akka.actor.ActorRef;
 
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -18,8 +15,6 @@ import java.util.concurrent.TimeUnit;
  * Created by StefanoFiora on 28/08/2017.
  */
 public class PreciseParticipant extends Participant {
-
-    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
 
     // Maximum Transfer Unit: maximum number of deltas inside a single gossip message
     protected int mtu;
@@ -37,8 +32,6 @@ public class PreciseParticipant extends Participant {
 
     private float alpha;
     private float beta;
-
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     // ----------------------
 
@@ -91,12 +84,6 @@ public class PreciseParticipant extends Participant {
         if (message.isSender()) {
 
             storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
-            // send all the new information to the observer only once
-//            reconciled.addAll(localUpdate);
-//            localUpdate.clear();
-//            this.history.get(this.current_timestep).addAll(reconciled);
-//            System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
-//            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
 
             if (this.flow_control) {
                 // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
@@ -122,15 +109,7 @@ public class PreciseParticipant extends Participant {
             // receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()) { // this is the message with deltas
 
-                synchronized (this) {
-                    storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
-                    // send all the new information to the observer only once
-//                    reconciled.addAll(localUpdate);
-//                    localUpdate.clear();
-//                    this.history.get(this.current_timestep).addAll(reconciled);
-//                    System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": " + id + " sending " + reconciled);
-//                    observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
-                }
+                storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
 
                 logger.info("Gossip completed");
             } else { // digest message to respond to
@@ -184,7 +163,8 @@ public class PreciseParticipant extends Participant {
             }
         }
         // this invariant must hold between updates
-        assert oldMax1 + oldMax2 == this.updateRate + senderupdateRate;
+        //if (oldMax1 + oldMax2 != this.updateRate + senderupdateRate)
+            //assert oldMax1 + oldMax2 == this.updateRate + senderupdateRate;
 
         // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
         if (oldMax1 == 0 && this.updateRate > 0){

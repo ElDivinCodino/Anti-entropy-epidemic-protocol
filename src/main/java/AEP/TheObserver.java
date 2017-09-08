@@ -1,7 +1,6 @@
 package AEP;
 
 import AEP.messages.ObserverHistoryMessage;
-import AEP.messages.ObserverUpdate;
 import AEP.messages.ObserverUpdateRate;
 import AEP.messages.SetupMessage;
 import AEP.nodeUtilities.Delta;
@@ -9,9 +8,6 @@ import akka.actor.UntypedActor;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -21,7 +17,6 @@ public class TheObserver extends UntypedActor {
 
     private int participantNumber;
     private int timesteps;
-    private int finalTimestep;
     private String pathname;
     private int historyProcess;
 
@@ -37,11 +32,8 @@ public class TheObserver extends UntypedActor {
 
     private int countProcesses = 0;
 
-    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
-
     private void initializeObserved(SetupMessage message) {
         this.participantNumber = message.getPs().size();
-        this.finalTimestep = message.getTimesteps().get(message.getTimesteps().size()-1);
         this.timesteps = message.getTimesteps().get(message.getTimesteps().size()-1);
         this.pathname = message.getStoragePath();
         this.historyProcess = message.getChosenProcess();
@@ -76,7 +68,6 @@ public class TheObserver extends UntypedActor {
     }
 
     private void saveUpdateRate(ObserverUpdateRate message){
-        // TODO: now we check here for adding just the chosen process. We should do it from the actors perspective.
         if (message.getId() == this.historyProcess){
             // for now we take a very simple approach: just save the incoming updateRate in the
             // given time step. Possible drawback: A single node changes its UR multiple times
@@ -85,27 +76,7 @@ public class TheObserver extends UntypedActor {
         }
     }
 
-    private synchronized void update(ObserverUpdate message) {
-        Integer id = message.getId();
-        ArrayList<Delta> updates = message.getUpdates();
-        Integer ts = message.getTimestep();
-
-        if (ts == this.finalTimestep) {
-            saveAndKill();
-        }
-
-
-//        System.out.println(sdf.format(new Date(System.currentTimeMillis())) + ": Storing " + updates + " from " + id);
-
-        for(Delta d : updates) {
-            if (!this.history.get(ts).get(id).contains(d))
-                this.history.get(ts).get(id).add(d);
-        }
-    }
-
     private void saveAndKill(){
-
-//        computeMaxStale();
 
         for (int i = 0; i < participantNumber; i++) {
             computeNumStale(i);
@@ -171,31 +142,22 @@ public class TheObserver extends UntypedActor {
             HashSet<Delta> toBeRemoved = new HashSet<>();
             for (Delta d2 : reconc) {
                 for (Delta d1 : tmp) {
-                    if (d1.getP() == d2.getP() && d1.getV() == d2.getV() && d1.getN() <= d2.getN()) {
+                    if (d1.getP() == d2.getP() && d1.getK() == d2.getK() && d1.getN() <= d2.getN()) {
                         toBeRemoved.add(d1);
                     }
                 }
             }
 
-            if (i > 130 && tmp.size() > 0) {
-                System.out.println("c");
-            }
-
             boolean changed = tmp.removeAll(toBeRemoved);  // returns true if the operation changes the list
 
-            assert size == (tmp.size() + inter.size());
+            assert size == (tmp.size() + toBeRemoved.size());
 
             if (numStale[i] < tmp.size()) // we take the maximum numStale among all the participant, for the same ts
                 numStale[i] = tmp.size();
             // TODO: tieni solo numStale di un singolo processo, non il max fra tutti
 
-            if(i == timesteps-1 && tmp.size() > 0){
-                for (Delta y: tmp
-                     ) {
-                    System.out.println(mainProcess + " STRONZO " + y);
-                }
-
-            }
+            if (i == timesteps-1)
+                assert tmp.size() > 0;
 
             // first we need to remove from the tree map the Deltas that have been reconciled
             if (changed) { // otherwise we don't even bother
@@ -231,7 +193,6 @@ public class TheObserver extends UntypedActor {
                 }
             }
             if (maxes.size() > 0){
-//                maxStale[i] = Collections.max(maxes);
                 // at timestep i per process mainProcess
                 maxStalePerProcess.get(i).set(mainProcess, Collections.max(maxes));
             }
@@ -279,16 +240,11 @@ public class TheObserver extends UntypedActor {
 
     @Override
     public void onReceive(Object message) throws Exception {
-//        logger.info("Received Message {}", message.toString());
 
         // class name is represented as dynamo.messages.className, so split and take last element.
         switch (message.getClass().getName().split("[.]")[2]) {
             case "SetupMessage": // initialization message
                 initializeObserved((SetupMessage) message);
-                break;
-            case "ObserverUpdate": // initialization message
-//                update((ObserverUpdate) message);
-                assert false;
                 break;
             case "ObserverUpdateRate":
                 saveUpdateRate((ObserverUpdateRate) message);

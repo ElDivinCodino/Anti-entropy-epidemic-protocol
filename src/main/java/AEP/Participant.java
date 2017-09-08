@@ -2,10 +2,8 @@ package AEP;
 
 import AEP.messages.*;
 import AEP.nodeUtilities.*;
-import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
-import scala.Array;
 import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
@@ -46,8 +44,6 @@ public class Participant extends UntypedActor{
 
     boolean stop = false;
 
-//    ArrayList<Delta> localUpdate = new ArrayList<>();
-
     public Participant(int id, CustomLogger.LOG_LEVEL level) {
         this.id = id;
         this.current_timestep = -1;  // beginning of experiment
@@ -83,7 +79,6 @@ public class Participant extends UntypedActor{
         logger.info("Setup completed for node " + id);
 
         ArrayList<Delta> initialList = new ArrayList<>(storage.getParticipantStates().subList(id * tuplesNumber, (id + 1) * tuplesNumber));
-//        observer.tell(new ObserverUpdate(this.id, 0, initialList), getSelf());
         assert this.current_timestep == 0;
         this.history.get(this.current_timestep).addAll(initialList);
 
@@ -98,12 +93,11 @@ public class Participant extends UntypedActor{
         if (this.chosenProcess == this.id) {
             System.out.println("current_timestep " + this.current_timestep);
         }
-//        System.out.println("chose process: " + this.chosenProcess);
 
         // if this is the last timestep, stop the experiment
         if (this.current_timestep == this.timesteps.get(this.timesteps.size()-1)){
             logger.info("End of experiment for Participant " + this.id);
-//            context().system().terminate();
+
             // Send to observer current history
             observer.tell(new ObserverHistoryMessage(this.id, this.history), getSelf());
             stop = true;
@@ -181,23 +175,11 @@ public class Participant extends UntypedActor{
     protected synchronized void gossipMessage(GossipMessage message){
         if (message.isSender()) {
             storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
-
-            // send all the new information to the observer only once
-//            reconciled.addAll(localUpdate);
-//            localUpdate.clear();
-//            this.history.get(this.current_timestep).addAll(reconciled);
-//            observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
             logger.info("Gossip exchange with node " + sender() + " completed");
         } else {
             // second phase, receiving message(s) from q.
             if (getSender() == getContext().system().deadLetters()){ // this is the message with deltas
                 storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
-
-                // send all the new information to the observer only once
-//                reconciled.addAll(localUpdate);
-//                localUpdate.clear();
-//                this.history.get(this.current_timestep).addAll(reconciled);
-//                observer.tell(new ObserverUpdate(this.id, this.current_timestep, reconciled), getSelf());
             }else{ // digest message to respond to
                 // send to q last message of exchange with deltas.
                 getSender().tell(new GossipMessage(true, storage.computeDifferences(message.getParticipantStates())), self());
@@ -211,9 +193,6 @@ public class Participant extends UntypedActor{
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);  // inclusive range
 
         this.history.get(this.current_timestep).add(storage.update(keyToBeUpdated, newValue, this.current_timestep));
-
-        // send update to Observer
-//        observer.tell(new ObserverUpdate(this.id, this.current_timestep, localUpdate), getSelf());
 
         if (this.updateRate != 0)
             scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);
