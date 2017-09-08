@@ -18,3 +18,31 @@ dependencies {
 
 
 
+/**
+ * Custom Gradle task to run an experiment.
+ * You can run the application in this way: ./gradlew experiment -Pmyargs="arg1 arg2 ..."
+ */
+task experiment(type: JavaExec) {
+    classpath sourceSets.main.runtimeClasspath
+    jvmArgs = ['-ea'] // enable
+    main = 'AEP.MainClass'
+
+    // this way we can pass some parameters to the java app
+    if (project.hasProperty('myargs')) {
+        args(myargs.split(' '))
+    }
+}
+
+/**
+ * Task to create the jar of the application
+ */
+task applicationjar(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    archiveName = 'aep.jar'
+    description = "DS2 project"
+    manifest.attributes 'Main-Class': 'AEP.MainClass'
+    from(project.convention.getPlugin(JavaPluginConvention).sourceSets.main.output)
+    configurations = [project.configurations.runtime]
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
+        resource = 'reference.conf'
+    }
+}

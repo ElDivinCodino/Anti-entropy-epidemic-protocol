@@ -9,6 +9,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import AEP.nodeUtilities.Utilities;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,25 +25,35 @@ public class MainClass {
 
     public static void main(String[] args) {
 
-        MainClass main = new MainClass(); // initialize the system
+        String error_msg = "Exactly 5 parameters are needed!\n" +
+                "\t- <Pclass> <Ordering> <nP> <nK> <FC>\n" +
+                "\t Pclass: [Participant|Precise|Scuttlebutt]\n" +
+                "\t Ordering: [Newest|Oldest|Breadth|Depth]\n" +
+                "\t nP: <int number>\n" +
+                "\t nK: <int number>\n" +
+                "\t nK: [true|false]\n";
+        if (args.length != 5){
+            throw new IllegalArgumentException(error_msg);
+        }
 
+        new MainClass(
+                args[0],
+                args[1],
+                Integer.parseInt(args[2]),
+                Integer.parseInt(args[3]),
+                Boolean.parseBoolean(args[4]));
     }
 
-    public MainClass() {
+    public MainClass(String mainClass, String orderingMethod, Integer participants, Integer deltas, boolean fc) {
 
         String localIP = null;
         String participantName;
         Config myConfig = ConfigFactory.load("application");
-        String mainClass = myConfig.getString("aep.experiment.class");
-        String orderingMethod = myConfig.getString("aep.experiment.ordering");
-        String destinationPath = myConfig.getString("aep.storage.location");
-        Integer participants = myConfig.getInt("aep.participants.p");
-        Integer deltas = myConfig.getInt("aep.participants.keys");
         Float alpha = (float)myConfig.getDouble("aep.flowcontrol.alpha");
         Float beta = (float)myConfig.getDouble("aep.flowcontrol.beta");
         Integer phi1 = myConfig.getInt("aep.flowcontrol.phi1");
         Integer phi2 = myConfig.getInt("aep.flowcontrol.phi2");
-        Boolean flow_control = myConfig.getBoolean("aep.flowcontrol.flowcontrol");
+        Boolean flow_control = fc;
         String loglevel = myConfig.getString("aep.logger.level");
         CustomLogger.LOG_LEVEL level = null;
 
@@ -83,10 +94,10 @@ public class MainClass {
             case "Participant":
                 myClass = Participant.class;
                 break;
-            case "PreciseParticipant":
+            case "Precise":
                 myClass = PreciseParticipant.class;
                 break;
-            case "ScuttlebuttParticipant":
+            case "Scuttlebutt":
                 myClass = ScuttlebuttParticipant.class;
                 break;
         }
@@ -102,21 +113,38 @@ public class MainClass {
         }
 
         Ordering method = null;
-
+        String destinationPath = "";
         switch (orderingMethod) {
             case "Oldest":
                 method = Ordering.OLDEST;
+                destinationPath = "/tmp/AEP/logs/precise_oldest";
                 break;
             case "Newest":
                 method = Ordering.NEWEST;
+                destinationPath = "/tmp/AEP/logs/precise_newest";
                 break;
-            case "ScuttleBreadth":
+            case "Breadth":
                 method = Ordering.SCUTTLEBREADTH;
+                destinationPath = "/tmp/AEP/logs/scuttle_breadth";
                 break;
-            case "ScuttleDepth":
+            case "Depth":
                 method = Ordering.SCUTTLEDEPTH;
+                destinationPath = "/tmp/AEP/logs/scuttle_depth";
                 break;
         }
+        if (fc) {
+            destinationPath = destinationPath + "_fc";
+        }
+
+        // Create log directory if not exists
+        File directory = new File(destinationPath);
+        if (! directory.exists()){
+            // make the entire directory path including parents
+            directory.mkdirs();
+        }
+        for(File file: directory.listFiles())
+            if (!file.isDirectory())
+                file.delete();
 
         // send first setup message to observer
         observer.tell(new SetupMessage(deltas, ps, mtu, destinationPath + "/" + "observer.txt", timesteps, updaterates, alpha, beta, method, phi1, phi2, flow_control, null, historyProcess), null);
