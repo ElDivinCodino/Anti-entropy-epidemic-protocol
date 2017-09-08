@@ -154,10 +154,9 @@ public class TheObserver extends UntypedActor {
 
             if (numStale[i] < tmp.size()) // we take the maximum numStale among all the participant, for the same ts
                 numStale[i] = tmp.size();
-            // TODO: tieni solo numStale di un singolo processo, non il max fra tutti
 
             if (i == timesteps-1)
-                assert tmp.size() > 0;
+                assert tmp.size() == 0;
 
             // first we need to remove from the tree map the Deltas that have been reconciled
             if (changed) { // otherwise we don't even bother

@@ -84,8 +84,6 @@ public class Storage {
     public synchronized ArrayList<Delta> createScuttlebuttDigest() {
         ArrayList<Delta> digest = new ArrayList<>();
 
-        // TODO: check participantNumber ordering
-
         for (int i = 0; i < participantNumber; i++){
             long higherVersion = -1;
             int key = -1;
@@ -187,7 +185,6 @@ public class Storage {
      * @return a TreeMap indicating the values which needs to be updated
      */
     public synchronized ArrayList<Delta> computeScuttlebuttDifferences(ArrayList<Delta> digest) {
-        // TODO : check ordering
         ArrayList<Delta> toBeUpdated= new ArrayList<>();
         for (int i = 0; i < digest.size(); i++){
             for (int index = i * tuplesNumber; index < tuplesNumber * (i + 1); index++) {
@@ -219,7 +216,6 @@ public class Storage {
                 mapDeltas.put(p, newArray);
             }
         }
-        // TODO: check ordering for version number
         return mapDeltas;
     }
 

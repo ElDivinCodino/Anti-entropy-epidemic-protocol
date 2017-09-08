@@ -12,18 +12,8 @@ public final class StartGossip implements Serializable{
 
     private ArrayList<Delta> participantStates;
 
-    // flow control parameters
-    long desiredUR;
-    long maximumUR;
-
     public StartGossip(ArrayList<Delta> participantStates) {
         this.participantStates = participantStates;
-    }
-
-    public StartGossip(ArrayList<Delta> participantStates, long desiredUR, long maximumUR) {
-        this.participantStates = participantStates;
-        this.desiredUR = desiredUR;
-        this.maximumUR = maximumUR;
     }
 
     /**

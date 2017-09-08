@@ -1,6 +1,5 @@
 package AEP.messages;
 
-import AEP.PreciseParticipant;
 import AEP.PreciseParticipant.Ordering;
 import akka.actor.ActorRef;
 
@@ -26,12 +25,6 @@ public final class SetupMessage implements Serializable {
     boolean flow_control;
     ActorRef observer;
     private int chosenProcess;
-
-
-    public SetupMessage(int tuplesNumber, List participants) {
-        this.tuplesNumber = tuplesNumber;
-        ps = participants;
-    }
 
     public SetupMessage(int tuplesNumber, List<ActorRef> ps, List<Integer> mtu, String storagePath, List<Integer> timesteps, List<Integer> updaterates, float alpha, float beta, Ordering ordering, int phi1, int phi2, boolean flow_control, ActorRef observer, int chosenProcess) {
         this.tuplesNumber = tuplesNumber;
