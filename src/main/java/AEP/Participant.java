@@ -35,6 +35,10 @@ public class Participant extends UntypedActor{
     protected boolean flow_control;
 
     protected ArrayList<ArrayList<Delta>> history;
+    protected boolean[] ifGossipMessageGreaterThanMTU;
+    // need to keep double array because it is possible that a node sends
+    // multiple messages in the same timestep (in response from multiple requests)
+    protected ArrayList<ArrayList<Integer>> numberOfDeltasSent;
 
     // experiment parameters
     int current_timestep;
@@ -68,8 +72,12 @@ public class Participant extends UntypedActor{
         this.updateRate = this.updaterates.get(0);
 
         this.history = new ArrayList<>();
+        this.ifGossipMessageGreaterThanMTU = new boolean[timesteps.get(timesteps.size()-1)];
+        this.numberOfDeltasSent = new ArrayList<>();
         for (int i = 0; i < this.timesteps.get(this.timesteps.size()-1); i++) {
             this.history.add(new ArrayList<>());
+            this.numberOfDeltasSent.add(new ArrayList<>());
+            this.ifGossipMessageGreaterThanMTU[i] = false;
         }
     }
 
@@ -99,7 +107,7 @@ public class Participant extends UntypedActor{
             logger.info("End of experiment for Participant " + this.id);
 
             // Send to observer current history
-            observer.tell(new ObserverHistoryMessage(this.id, this.history), getSelf());
+            observer.tell(new ObserverHistoryMessage(this.id, this.history, this.numberOfDeltasSent, this.ifGossipMessageGreaterThanMTU), getSelf());
             stop = true;
             current_timestep--;
             return;

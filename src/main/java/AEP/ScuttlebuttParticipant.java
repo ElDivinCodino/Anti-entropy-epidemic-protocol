@@ -75,6 +75,11 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
                 localAdaptation(toBeUpdated.size());
             }
 
+            if (toBeUpdated.size() > this.mtu){
+                this.ifGossipMessageGreaterThanMTU[this.current_timestep] = true;
+            }
+            this.numberOfDeltasSent.get(this.current_timestep).add(toBeUpdated.size());
+
             // Sender set to null because we do not need any answer to this message
             getSender().tell(new GossipMessage(false, storage.mtuResizeAndSort(toBeUpdated, mtu, new ScuttlebuttComparator(), this.method)), null);
 
@@ -103,6 +108,11 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
                 if (this.desiredUR != 0 && this.flow_control){
                     localAdaptation(toBeUpdated.size());
                 }
+
+                if (toBeUpdated.size() > this.mtu){
+                    this.ifGossipMessageGreaterThanMTU[this.current_timestep] = true;
+                }
+                this.numberOfDeltasSent.get(this.current_timestep).add(toBeUpdated.size());
 
                 getSender().tell(new GossipMessage(true,
                         storage.mtuResizeAndSort(toBeUpdated, mtu, new ScuttlebuttComparator(), this.method),

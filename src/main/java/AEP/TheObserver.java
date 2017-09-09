@@ -25,6 +25,8 @@ public class TheObserver extends UntypedActor {
     // these array lists are #timesteps long
     private ArrayList<ArrayList<Integer>> maxStalePerProcess;
     private ArrayList<ArrayList<Integer>> numStalePerProcess;
+    private int[] numberOfDeltasSent;
+    private int[] ifGossipMessageGreaterThanMTU;
     private int[] maxStale;
     private int[] numStale;
 
@@ -40,6 +42,8 @@ public class TheObserver extends UntypedActor {
         this.historyProcess = message.getChosenProcess();
         this.maxStalePerProcess = new ArrayList<>(timesteps);
         this.numStalePerProcess = new ArrayList<>(timesteps);
+        this.numberOfDeltasSent = new int[timesteps];
+        this.ifGossipMessageGreaterThanMTU = new int[timesteps];
         this.maxStale = new int[timesteps];
         this.numStale = new int[timesteps];
         this.updateRates = new float[timesteps];
@@ -59,9 +63,15 @@ public class TheObserver extends UntypedActor {
     }
 
     private synchronized void collectHistory(ObserverHistoryMessage message){
+
         for (int i = 0; i < this.timesteps; i++) {
             int currentP = message.getId();
             this.history.get(i).get(currentP).addAll(message.getHistory().get(i));
+
+            this.numberOfDeltasSent[i] += message.getNumberOfDeltas().get(i).stream().mapToInt(Integer::intValue).sum();
+
+            if (message.getIfGreaterThanMtu()[i])
+                this.ifGossipMessageGreaterThanMTU[i]++;
         }
         this.countProcesses++;
         if (countProcesses == this.participantNumber){
@@ -227,8 +237,16 @@ public class TheObserver extends UntypedActor {
             sb.append(numStale[i]).append(" ");
         }
         sb.append("\n");
-        for (int i = 0; i < updateRates.length; i++) {
-            sb.append(updateRates[i]).append(" ");
+        for (int i = 0; i < this.updateRates.length; i++) {
+            sb.append(this.updateRates[i]).append(" ");
+        }
+        sb.append("\n");
+        for (int i = 0; i < this.ifGossipMessageGreaterThanMTU.length; i++) {
+            sb.append(this.ifGossipMessageGreaterThanMTU[i]).append(" ");
+        }
+        sb.append("\n");
+        for (int i = 0; i < this.numberOfDeltasSent.length; i++) {
+            sb.append(this.numberOfDeltasSent[i]).append(" ");
         }
         return sb.toString();
     }
