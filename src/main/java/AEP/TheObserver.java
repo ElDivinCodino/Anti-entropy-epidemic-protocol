@@ -24,6 +24,7 @@ public class TheObserver extends UntypedActor {
 
     // these array lists are #timesteps long
     private ArrayList<ArrayList<Integer>> maxStalePerProcess;
+    private ArrayList<ArrayList<Integer>> numStalePerProcess;
     private int[] maxStale;
     private int[] numStale;
 
@@ -38,6 +39,7 @@ public class TheObserver extends UntypedActor {
         this.pathname = message.getStoragePath();
         this.historyProcess = message.getChosenProcess();
         this.maxStalePerProcess = new ArrayList<>(timesteps);
+        this.numStalePerProcess = new ArrayList<>(timesteps);
         this.maxStale = new int[timesteps];
         this.numStale = new int[timesteps];
         this.updateRates = new float[timesteps];
@@ -47,6 +49,7 @@ public class TheObserver extends UntypedActor {
         for (int i = 0; i < timesteps; i++) {
             ArrayList<ArrayList<Delta>> process = new ArrayList<>();
             maxStalePerProcess.add(new ArrayList<>());
+            numStalePerProcess.add(new ArrayList<>());
             for (int j = 0; j < participantNumber; j++) {
                 process.add(new ArrayList<>());
                 maxStalePerProcess.get(i).add(0);
@@ -83,6 +86,7 @@ public class TheObserver extends UntypedActor {
         }
         for (int i = 0; i < timesteps; i++) {
             maxStale[i] = Collections.max(maxStalePerProcess.get(i));
+            numStale[i] = ((Long)Math.round(numStalePerProcess.get(i).stream().mapToInt(val -> val).average().getAsDouble())).intValue();
         }
 
         save();
@@ -152,8 +156,10 @@ public class TheObserver extends UntypedActor {
 
             assert size == (tmp.size() + toBeRemoved.size());
 
-            if (numStale[i] < tmp.size()) // we take the maximum numStale among all the participant, for the same ts
-                numStale[i] = tmp.size();
+//            if (numStale[i] < tmp.size()) // we take the maximum numStale among all the participant, for the same ts
+//            if (mainProcess == this.historyProcess)
+//                numStale[i] = tmp.size();
+            numStalePerProcess.get(i).add(tmp.size());
 
             if (i == timesteps-1)
                 assert tmp.size() == 0;

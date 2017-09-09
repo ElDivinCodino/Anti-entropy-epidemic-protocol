@@ -27,8 +27,8 @@ public class PreciseParticipant extends Participant {
 
     private int phiBiggerMax;
     private int phiSmallerMax;
-    private int phiBiggerCounter;
-    private int phiSmallerCounter;
+    private int phiBiggerCounter = 0;
+    private int phiSmallerCounter = 0;
 
     private float alpha;
     private float beta;
@@ -121,7 +121,7 @@ public class PreciseParticipant extends Participant {
                     // here we calculate the new flow control parameters updating the local maximum update rate
                     // the sender update rate gets included in the gossip message to q
                     if (this.desiredUR == 0){
-                        // TODO: check this
+                        // TODO: check this: fact is that we assume that if someone does not want to transmit then no one else should either > global control over update rate.
                         senderupdateRate = 0;
                     }else {
                         senderupdateRate = computeUpdateRate(message.getMaximumUR(), message.getDesiredUR());
@@ -147,7 +147,7 @@ public class PreciseParticipant extends Participant {
         float oldMax2 = senderupdateRate;
         float maxRateAvg = (this.updateRate + senderupdateRate) / 2;
         if (this.desiredUR + senderDesiredUR <= this.updateRate + senderupdateRate){
-            float delta = this.desiredUR + senderDesiredUR - this.updateRate - senderupdateRate;
+            float delta = this.updateRate + senderupdateRate - this.desiredUR - senderDesiredUR;
             this.updateRate = this.desiredUR + delta / 2;
             senderupdateRate = senderDesiredUR + delta / 2;
         }else {  // this.desiredUR + senderDesiredUR > this.updateRate + sender updateRate
@@ -155,17 +155,18 @@ public class PreciseParticipant extends Participant {
                 // the participants both get the same value
                 this.updateRate = senderupdateRate = maxRateAvg;
             }else if (this.desiredUR < maxRateAvg){
-                this.updateRate = this.desiredUR;
                 senderupdateRate = this.updateRate + senderupdateRate - this.desiredUR;
+                this.updateRate = this.desiredUR;
             }else{ // senderDesiredUR < maxRateAvg
-                senderupdateRate = senderDesiredUR;
                 this.updateRate = this.updateRate + senderupdateRate - senderDesiredUR;
+                senderupdateRate = senderDesiredUR;
             }
         }
         // this invariant must hold between updates
-        //if (oldMax1 + oldMax2 != this.updateRate + senderupdateRate)
-            //assert oldMax1 + oldMax2 == this.updateRate + senderupdateRate;
-
+//        if (oldMax1 + oldMax2 != this.updateRate + senderupdateRate) {
+//            System.out.println("OldMax1: " + oldMax1 + " OldMax2: " + oldMax2 + " updateRate: " + this.updateRate + " senderUpdateRate: " + senderupdateRate + " this.desiredUR: " + this.desiredUR);
+////            assert oldMax1 + oldMax2 == this.updateRate + senderupdateRate;
+//        }
         // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
         if (oldMax1 == 0 && this.updateRate > 0){
             scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);
@@ -188,9 +189,11 @@ public class PreciseParticipant extends Participant {
         // check if a counter has surpassed the threshold
         if (this.phiBiggerCounter >= this.phiBiggerMax){
             this.updateRate = this.alpha * this.updateRate;
+            this.phiBiggerCounter = 0;  // reset counter
         }
         if (this.phiSmallerCounter >= this.phiSmallerMax){
             this.updateRate = Math.min(this.updateRate + this.beta, mtu);
+            this.phiSmallerCounter = 0;  // reset counter
         }
         // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
         if (prev == 0 && this.updateRate > 0){

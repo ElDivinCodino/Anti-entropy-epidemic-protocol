@@ -28,7 +28,7 @@ public class MainClass {
         String error_msg = "Exactly 5 parameters are needed!\n" +
                 "\t- <Pclass> <Ordering> <nP> <nK> <FC>\n" +
                 "\t Pclass: [Participant|Precise|Scuttlebutt]\n" +
-                "\t Ordering: [Newest|Oldest|Breadth|Depth]\n" +
+                "\t Ordering: [None|Newest|Oldest|Breadth|Depth]\n" +
                 "\t nP: <int number>\n" +
                 "\t nK: <int number>\n" +
                 "\t nK: [true|false]\n";
@@ -44,8 +44,9 @@ public class MainClass {
                 Boolean.parseBoolean(args[4]));
     }
 
-    public MainClass(String mainClass, String orderingMethod, Integer participants, Integer deltas, boolean fc) {
+    public MainClass(String mainClass, String orderingMethod, Integer participants, Integer deltas, boolean flow_control) {
 
+        System.out.println(mainClass + " " + orderingMethod + " " + participants + " " + deltas + " " + flow_control);
         String localIP = null;
         String participantName;
         Config myConfig = ConfigFactory.load("application");
@@ -53,7 +54,6 @@ public class MainClass {
         Float beta = (float)myConfig.getDouble("aep.flowcontrol.beta");
         Integer phi1 = myConfig.getInt("aep.flowcontrol.phi1");
         Integer phi2 = myConfig.getInt("aep.flowcontrol.phi2");
-        Boolean flow_control = fc;
         String loglevel = myConfig.getString("aep.logger.level");
         CustomLogger.LOG_LEVEL level = null;
 
@@ -115,6 +115,9 @@ public class MainClass {
         Ordering method = null;
         String destinationPath = "";
         switch (orderingMethod) {
+            case "None":
+                destinationPath = "/tmp/AEP/logs/participant";
+                break;
             case "Oldest":
                 method = Ordering.OLDEST;
                 destinationPath = "/tmp/AEP/logs/precise_oldest";
@@ -132,7 +135,7 @@ public class MainClass {
                 destinationPath = "/tmp/AEP/logs/scuttle_depth";
                 break;
         }
-        if (fc) {
+        if (flow_control) {
             destinationPath = destinationPath + "_fc";
         }
 

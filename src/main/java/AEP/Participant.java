@@ -101,6 +101,8 @@ public class Participant extends UntypedActor{
             // Send to observer current history
             observer.tell(new ObserverHistoryMessage(this.id, this.history), getSelf());
             stop = true;
+            current_timestep--;
+            return;
         }
         // if there is a change in the update rate
         if (this.current_timestep_index < this.timesteps.size() && this.current_timestep == this.timesteps.get(this.current_timestep_index)){
@@ -127,11 +129,8 @@ public class Participant extends UntypedActor{
 
         // from the configuration file then the UR will just be the value obtained by flow control calculations
         if (this.chosenProcess == this.id && this.current_timestep < this.timesteps.get(this.timesteps.size() - 1)){
-            System.out.println("Participant: " + this.id + "   updateRate: " + this.updateRate);
+//            System.out.println("Participant: " + this.id + "   updateRate: " + this.updateRate);
             this.observer.tell(new ObserverUpdateRate(this.id, this.current_timestep, this.updateRate), getSelf());
-        }
-        if (stop){
-            current_timestep--;
         }
     }
 

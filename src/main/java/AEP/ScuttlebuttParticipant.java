@@ -36,7 +36,7 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
 
         q.tell(new StartGossip(storage.createScuttlebuttDigest()), self());
 
-        if (this.current_timestep != this.timesteps.get(this.timesteps.size()-1)) {
+        if (this.current_timestep != this.timesteps.get(this.timesteps.size()-1) && !this.stop) {
             logger.info("Timeout: sending StartGossip to " + q);
             scheduleTimeout(this.gossipRate, TimeUnit.SECONDS);
         } else {
