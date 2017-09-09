@@ -171,8 +171,8 @@ public class TheObserver extends UntypedActor {
 //                numStale[i] = tmp.size();
             numStalePerProcess.get(i).add(tmp.size());
 
-            if (i == timesteps-1)
-                assert tmp.size() == 0;
+//            if (i == timesteps-1)
+//                assert tmp.size() == 0;
 
             // first we need to remove from the tree map the Deltas that have been reconciled
             if (changed) { // otherwise we don't even bother
