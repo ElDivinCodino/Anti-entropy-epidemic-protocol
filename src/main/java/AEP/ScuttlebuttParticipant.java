@@ -10,9 +10,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Created by Francesco on 28/08/17.
- */
 public class ScuttlebuttParticipant extends PreciseParticipant {
 
     public ScuttlebuttParticipant(int id, CustomLogger.LOG_LEVEL level) {

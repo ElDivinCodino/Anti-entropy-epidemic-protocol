@@ -10,9 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Created by Francesco on 24/08/17.
- */
 public class Participant extends UntypedActor{
 
     protected ActorRef observer;
@@ -30,23 +27,30 @@ public class Participant extends UntypedActor{
     protected float updateRate = 1;
     // used in FC classes
     protected float desiredUR;
-    protected int gossipRate = 1;  // one gossip message per second
+    // one gossip message per second
+    protected int gossipRate = 1;
 
+    // true if experiments uses flow control
     protected boolean flow_control;
 
+    // keep track of every local update and reconciliation done for every timestep
     protected ArrayList<ArrayList<Delta>> history;
+    // true if for timestep i the participant wanted to send more deltas than MTU allowed
     protected boolean[] ifGossipMessageGreaterThanMTU;
     // need to keep double array because it is possible that a node sends
     // multiple messages in the same timestep (in response from multiple requests)
-    protected ArrayList<ArrayList<Integer>> numberOfDeltasSent;
+    protected ArrayList<ArrayList<Integer>> numberOfDeltasSent;  // for each timestep
 
     // experiment parameters
-    int current_timestep;
-    int current_timestep_index;
-    List<Integer> timesteps;
-    List<Integer> updaterates;
+    protected int current_timestep;
+    // index of arrays in configuration file
+    protected int current_timestep_index;
+    // the timesteps at which there are changes of update rate or mtu
+    protected List<Integer> timesteps;
+    protected List<Integer> updaterates;
 
-    boolean stop = false;
+    // true if participant has ended experiment
+    protected boolean stop = false;
 
     public Participant(int id, CustomLogger.LOG_LEVEL level) {
         this.id = id;
@@ -57,6 +61,9 @@ public class Participant extends UntypedActor{
         this.logger.setLevel(level);
     }
 
+    /**
+     * Initialize all the values from the SetupMessage sent by the MainClass
+     */
     protected synchronized void initValues(SetupMessage message){
         this.tuplesNumber = message.getTuplesNumber();
         this.observer = message.getObserver();
@@ -81,6 +88,11 @@ public class Participant extends UntypedActor{
         }
     }
 
+    /**
+     * Initialize Participant,
+     * Initialize storage and init first value for each delta
+     * Start time recording and set first timeout
+     */
     private synchronized void setupMessage(SetupMessage message){
         initValues(message);
         increaseTimeStep();
@@ -95,6 +107,12 @@ public class Participant extends UntypedActor{
             scheduleUpdateTimeout(Math.round(1000/updateRate), TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Increase the current timestep and update UR or MTU accordingly
+     * based on configuration file parameters.
+     * Stop the experiment and send data to TheObserver in case this is the
+     * last timestep
+     */
     protected synchronized void increaseTimeStep(){
         // increase time counter
         this.current_timestep++;
@@ -109,6 +127,7 @@ public class Participant extends UntypedActor{
             // Send to observer current history
             observer.tell(new ObserverHistoryMessage(this.id, this.history, this.numberOfDeltasSent, this.ifGossipMessageGreaterThanMTU), getSelf());
             stop = true;
+            // allow following code not to fail due to indexOutOfBounds
             current_timestep--;
             return;
         }
@@ -142,8 +161,15 @@ public class Participant extends UntypedActor{
         }
     }
 
+    /**
+     * Method used in PreciseParticipant and ScuttlebuttParticipant
+     */
     protected void changeMTU() {}
 
+    /**
+     * Choose a random participand and start gossiping with it.
+     * Schedule a new timeout message
+     */
     protected synchronized void timeoutMessage(TimeoutMessage message){
         this.increaseTimeStep();
 
@@ -166,8 +192,7 @@ public class Participant extends UntypedActor{
     }
 
     /**
-     * First phase, here q receives the Digest from p
-     * @param message
+     * First phase, here q receives the Digest from p (send in timeoutMessage() method)
      */
     protected synchronized void startGossip(StartGossip message){
         logger.info("First phase: Digest from " + getSender());
@@ -179,6 +204,9 @@ public class Participant extends UntypedActor{
         logger.info("Second phase: sending differences + digest to " + getSender());
     }
 
+    /**
+     * Handle second and third phase of gossip exchange
+     */
     protected synchronized void gossipMessage(GossipMessage message){
         if (message.isSender()) {
             storage.reconciliation(message.getParticipantStates(), history, this.current_timestep);
@@ -195,6 +223,11 @@ public class Participant extends UntypedActor{
         }
     }
 
+    /**
+     * Update a random local delta with a random value.
+     * Add this local update to local history.
+     * Schedule new update timeout based on current updateRate
+     */
     private synchronized void update() {
         String newValue = Utilities.getRandomNum(0, 1000).toString();
         int keyToBeUpdated = Utilities.getRandomNum(0, tuplesNumber - 1);  // inclusive range

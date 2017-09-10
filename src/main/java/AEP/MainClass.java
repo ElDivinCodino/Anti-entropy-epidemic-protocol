@@ -21,8 +21,6 @@ import AEP.PreciseParticipant.Ordering;
  */
 public class MainClass {
 
-    private List<ActorRef> ps = new ArrayList<ActorRef>();
-
     public static void main(String[] args) {
 
         String error_msg = "Exactly 5 parameters are needed!\n" +
@@ -83,11 +81,7 @@ public class MainClass {
         }
 
         // Set up participant states and the actor system
-
-//        Integer randomPort = Utilities.getRandomNum(10000, 10100);
-//        Config custom = ConfigFactory.parseString("akka.remote.netty.tcp.hostname =" + localIP + ", akka.remote.netty.tcp.port = " + randomPort);
-
-        ActorSystem system = ActorSystem.create("AEP"/*, custom.withFallback(myConfig)*/);
+        ActorSystem system = ActorSystem.create("AEP");
 
         Class myClass = null;
         switch (mainClass) {
@@ -105,6 +99,7 @@ public class MainClass {
         ActorRef observer = system.actorOf(Props.create(TheObserver.class), "Observer");
 
         // Set up all the participants
+        List<ActorRef> ps = new ArrayList<>();
         for (int i = 0; i < participants; i++) {
             participantName = "Participant_" + i;
 

@@ -10,21 +10,27 @@ import akka.actor.ActorRef;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
 /**
- * Created by StefanoFiora on 28/08/2017.
+ * Extends class Participant to leverage base implementation methods
+ * Here there are different method call to compute reconciliation
+ * and gossip message creation.
+ * All the flow control logic is implemented here and inherited by ScuttlebuttParticipant
  */
 public class PreciseParticipant extends Participant {
 
     // Maximum Transfer Unit: maximum number of deltas inside a single gossip message
     protected int mtu;
+    // Array of MTU changes form the configuration file
     private List<Integer> mtuArray;
 
+    // The digest sent from p to q during first phase of gossip exchange
+    // Need to store them in case we have to handle multiple gossip exhanges at the same time.
     protected TreeMap<ActorRef, ArrayList<Delta>> storedDigests;
 
     public enum Ordering { OLDEST, NEWEST, SCUTTLEBREADTH, SCUTTLEDEPTH};
     protected Ordering method;
 
+    // Variable needed for local adaptation (flow control)
     private int phiBiggerMax;
     private int phiSmallerMax;
     private int phiBiggerCounter = 0;
@@ -32,8 +38,8 @@ public class PreciseParticipant extends Participant {
 
     private float alpha;
     private float beta;
+    // -------------------------------------------------
 
-    // ----------------------
 
     public PreciseParticipant(int id, CustomLogger.LOG_LEVEL level) {
         super(id, level);
@@ -67,6 +73,10 @@ public class PreciseParticipant extends Participant {
         }
     }
 
+    /**
+     * First phase: receiving the StartGossip message sent by p
+     * Store the digest sent by p, then send back q's digest
+     */
     protected synchronized void startGossip(StartGossip message){
         logger.info("First phase: Digest from " + getSender());
 
@@ -79,6 +89,12 @@ public class PreciseParticipant extends Participant {
         logger.info("Second phase: sending digest to " + getSender());
     }
 
+    /**
+     * Handle second, third and fourth phase of gossip exchange.
+     * Once p receives the digest from q, it computes its local differences
+     * and sends deltas to q (third pahse). Then q retrieves p's digest
+     * from its map and does the same thing, sending back to p some deltas (fourth phase)
+     */
     protected synchronized void gossipMessage(GossipMessage message){
         // p sent to q the updates
         if (message.isSender()) {
@@ -127,7 +143,8 @@ public class PreciseParticipant extends Participant {
                     // here we calculate the new flow control parameters updating the local maximum update rate
                     // the sender update rate gets included in the gossip message to q
                     if (this.desiredUR == 0){
-                        // TODO: check this: fact is that we assume that if someone does not want to transmit then no one else should either > global control over update rate.
+                        // we assume that if someone does not want to transmit then no one
+                        // else should either since we have global control over the update rate.
                         senderupdateRate = 0;
                     }else {
                         senderupdateRate = computeUpdateRate(message.getMaximumUR(), message.getDesiredUR());
@@ -153,6 +170,13 @@ public class PreciseParticipant extends Participant {
         }
     }
 
+    /**
+     * Compute new update rates both for sender and for current participant
+     * based on flow control rules
+     * @param senderupdateRate Sender's local (maximum) update rate
+     * @param senderDesiredUR Sender's desired update rate
+     * @return The sender's new update rate
+     */
     protected float computeUpdateRate(float senderupdateRate, float senderDesiredUR){
         float oldMax1 = this.updateRate;
         float oldMax2 = senderupdateRate;
@@ -173,11 +197,7 @@ public class PreciseParticipant extends Participant {
                 senderupdateRate = senderDesiredUR;
             }
         }
-        // this invariant must hold between updates
-//        if (oldMax1 + oldMax2 != this.updateRate + senderupdateRate) {
-//            System.out.println("OldMax1: " + oldMax1 + " OldMax2: " + oldMax2 + " updateRate: " + this.updateRate + " senderUpdateRate: " + senderupdateRate + " this.desiredUR: " + this.desiredUR);
-////            assert oldMax1 + oldMax2 == this.updateRate + senderupdateRate;
-//        }
+
         // in case we were not updating before and the new updateRate is > 0. Need to start updating again.
         if (oldMax1 == 0 && this.updateRate > 0){
             scheduleUpdateTimeout(Math.round(1000/this.updateRate), TimeUnit.MILLISECONDS);
@@ -186,6 +206,10 @@ public class PreciseParticipant extends Participant {
         return senderupdateRate;
     }
 
+    /**
+     * Updates the UR based on local adaptation rules
+     * @param messageSize the number of deltas that this node wants to send
+     */
     protected void localAdaptation(int messageSize){
         float prev = this.updateRate;
         if (messageSize > this.mtu) {

@@ -10,9 +10,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
-/**
- * Created by StefanoFiora on 30/08/2017.
- */
 public class TheObserver extends UntypedActor {
 
     private int participantNumber;

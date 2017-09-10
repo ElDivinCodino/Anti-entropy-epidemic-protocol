@@ -5,9 +5,6 @@ import AEP.nodeUtilities.Delta;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-/**
- * Created by StefanoFiora on 30/08/2017.
- */
 public final class ObserverHistoryMessage implements Serializable {
 
     Integer id;
