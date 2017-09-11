@@ -7,7 +7,11 @@ The `run.sh` script will handle all the compilation and the "java-related-stuff"
 You just have to run
 
 ```bash
-./run.sh experiment <Class> <OrderingMethod> <NumberOfParticipants> <NumberOfKeys> <FlowControl[true|false]>
+./run.sh experiment <Class:[Participant|Precise|Scuttlebutt]>\
+	<OrderingMethod:[None|Newest|Oldest|Breadth|Depth]>\
+	<NumberOfParticipants:[Int]>\
+	<NumberOfKeys:[Int]>\
+	<FlowControl:[true|false]>
 ```
 
 All the details about what these arguments do and what they mean are in the report.
