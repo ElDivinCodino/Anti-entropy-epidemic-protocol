@@ -1,64 +1,19 @@
 ## DS2-Project
 
-#### Efficient Reconciliation and Flow Control for Anti-Entropy Protocols
+To run the project move to the root directory of the repository.
 
-Gossip protocols, useful for replicating state without string consistency requirements. 
+The `run.sh` script will handle all the compilation and the "java-related-stuff" by itself.
 
-Issue: How Gossip behaves under *high update load*. Gossip capacity is limited by network bandwidth and CPU cycles for generating and processing messages.
+You just have to run
 
-Have to:
+```bash
+./run.sh experiment <Class> <OrderingMethod> <NumberOfParticipants> <NumberOfKeys> <FlowControl[true|false]>
+```
 
-- fix gossip rate
-- fix maximum message size
+All the details about what these arguments do and what they mean are in the report.
 
 --
 
-Each process has a *local* view of each other.
+The program will output the metrics in `/tmp/AEP/logs/<experiment_name>`. The *experiment_name* will be dynamic based on the experiment run.
 
-Each participant state is replicated to all other participants > ??
-$\mu_p(q)$ indica che il processo p conosce lo stato di q.
-
-Reconciliation: take the v with the highest n number.
-
-Each participant has a set of *Peers* that is gossips with. Periodically a process gossips with its peers choosing one at random.
-
-**push-gossip**: a participant $p$ sends its whole state $\mu_p$ to $q$. So it sends all the states of the processes it knows of.
-
-**pull-gossip**: $p$ sends a *digest* of $\mu_p$ (with the values removed) and $q$ sends back just the updates.
-
-**push-pull**: merge of the two. This is the most efficient style.
-
-**delta**: a tuple (p, k, v, n)
-
-### Reconciliation (improved)
-
-#### Precise reconciliation
-
-Send only necessary updates.
-
-Send exactly those mappings that are more recent than those of the peer.
-
-#### Scuttlebutt reconciliation
-
-Ogni qual volta un processo vuole aggiornare un elemento locale, deve utilizzare un numero di n più alto del massimo attuale.
-
-Prima di tutto p e q si scambiano i loro massimi dei processi di cui hanno delle tuple.
-
-Poi p invia a q tutte le tuple che hanno un numero di versione maggiore rispetto al massimo che vede q per quel processo.
-E viceversa per q.
-
-se c'è una mtu (quindi un numero massimo di delta da mandare) vengono mandati prima i delta che hanno un n number minore. (Con un ordinamento singolo per ciascun processo)
-
-Possible types of orderings:
-
-- scuttle-breath: Prima si esegue un ordinamento locale per ogni processo, poi si prende in ordine il primo elemento da ogni processo, poi il secondo elemento da ogni processo e cosi via. L'ordine con cui si prendono questi elementi (quindi l'ordine dei processi) è casuale e cambia ad ogni messaggio (per evitare bias).
-- scuttle-depth: L'ordinamento va in base al numero di delta che un processo può inviare. Quindi il processo che ha più delta invia per primo. Nel caso ci sia lo stesso numero di delta per diversi processi si sceglie a random.
-
-
-## Resources
-
-https://distributedalgorithm.wordpress.com/2014/05/15/scuttlebutt-gossip-protocol/
-
-https://github.com/dominictarr/scuttlebutt
-
-https://awinterman.github.io/simple-scuttle/
+In order to plot the metrics there is a handy python script `src/plot/plot.py`. Just set the path to the folder containing the outputs of the experiments and uncomment all the traces you want to appear in the plots.

@@ -12,14 +12,19 @@ import java.util.*;
 
 public class TheObserver extends UntypedActor {
 
+    // the number of participants in this experiment
     private int participantNumber;
+    // the number of timesteps in the experiment
     private int timesteps;
     private String pathname;
+    // a process for which to measure the metrics (randomly chosen)
     private int historyProcess;
 
+    // whole history of updates and reconciliations of the experiment
     private ArrayList<ArrayList<ArrayList<Delta>>> history;
 
     // these array lists are #timesteps long
+    // metrics
     private ArrayList<ArrayList<Integer>> maxStalePerProcess;
     private ArrayList<ArrayList<Integer>> numStalePerProcess;
     private int[] numberOfDeltasSent;
@@ -30,6 +35,7 @@ public class TheObserver extends UntypedActor {
     // keep track of the updateRate used by a chosen process at each time step
     private float[] updateRates;
 
+    // how many processes have delivered their history
     private int countProcesses = 0;
 
     private void initializeObserved(SetupMessage message) {
@@ -59,6 +65,10 @@ public class TheObserver extends UntypedActor {
         }
     }
 
+    /**
+     * Collect the history sent by a process and start metrics computations
+     * when received all histories
+     */
     private synchronized void collectHistory(ObserverHistoryMessage message){
 
         for (int i = 0; i < this.timesteps; i++) {
@@ -72,11 +82,14 @@ public class TheObserver extends UntypedActor {
         }
         this.countProcesses++;
         if (countProcesses == this.participantNumber){
-            // start computing staleness
+            // start computing metrics
             saveAndKill();
         }
     }
 
+    /**
+     * Each participants sends its update rate once per timestep
+     */
     private void saveUpdateRate(ObserverUpdateRate message){
         if (message.getId() == this.historyProcess){
             // for now we take a very simple approach: just save the incoming updateRate in the
@@ -102,20 +115,30 @@ public class TheObserver extends UntypedActor {
     }
 
     // filter out and take only the local updates if locals == true, ore the non local updates if locals == false
+
+    /**
+     * Take only local updates (locals = true) or reconliations (locals = false)
+     * from an array of updates of a process (for a single timestep)
+     */
     private ArrayList<Delta> getLocals (ArrayList<Delta> updates, int process, boolean locals) {
         ArrayList<Delta> localDeltas = new ArrayList<>();
 
         for (Delta d: updates) {
+            // we want local updates so we take those deltas belonging to this process
             if (d.getP() == process && locals) {
                 localDeltas.add(d);
             } else if (d.getP() != process && !locals){
                 localDeltas.add(d);
             }
         }
-
         return localDeltas;
     }
 
+    /**
+     * Compute both the number of stale deltas and the maximum staleness
+     * for a certain process, for each time step
+     * @param mainProcess the process for which to compute the metrics
+     */
     private void computeNumStale(Integer mainProcess) {
 
         // a map that keeps track of the stale deltas present in the historyProcess
@@ -149,7 +172,6 @@ public class TheObserver extends UntypedActor {
             // reconciled updates happened at historyProcess participant
             // In this way we leave inside tmp just the local updates that were
             // not propagated to historyProcess participant.
-
             HashSet<Delta> toBeRemoved = new HashSet<>();
             for (Delta d2 : reconc) {
                 for (Delta d1 : tmp) {
@@ -163,13 +185,8 @@ public class TheObserver extends UntypedActor {
 
             assert size == (tmp.size() + toBeRemoved.size());
 
-//            if (numStale[i] < tmp.size()) // we take the maximum numStale among all the participant, for the same ts
-//            if (mainProcess == this.historyProcess)
-//                numStale[i] = tmp.size();
+            // numStale is the number of deltas that have not yet been reconciled
             numStalePerProcess.get(i).add(tmp.size());
-
-//            if (i == timesteps-1)
-//                assert tmp.size() == 0;
 
             // first we need to remove from the tree map the Deltas that have been reconciled
             if (changed) { // otherwise we don't even bother
@@ -181,14 +198,13 @@ public class TheObserver extends UntypedActor {
             }
 
             /*
-             tmp contains now the deltas that are stale in process historyProcess at timestep i
-             so now we can do two things:
-                - if the delta was stale at previous ts, then it is already present in the treemap and we increase the counter
-                - if the delta was not stale before, then we insert the key in the treemap
+             tmp contains now the deltas that are stale in process historyProcess at time step i
+             Insert new deltas with counter 0. Increase by 1 all counters to increase staleness of one time step
             */
             for (Delta d : tmp) {
                 if (maxStaleCounter.get(d.getP()).containsKey(d.getK())){  // increase staleness of this key
-//                    maxStaleCounter.get(d.getP()).put(d.getK(), maxStaleCounter.get(d.getP()).get(d.getK()) + 1);
+                    // we do this after the for loop
+                    // maxStaleCounter.get(d.getP()).put(d.getK(), maxStaleCounter.get(d.getP()).get(d.getK()) + 1);
                 } else {
                     maxStaleCounter.get(d.getP()).put(d.getK(), 0);
                 }
@@ -205,12 +221,15 @@ public class TheObserver extends UntypedActor {
                 }
             }
             if (maxes.size() > 0){
-                // at timestep i per process mainProcess
+                // at time step i per process mainProcess
                 maxStalePerProcess.get(i).set(mainProcess, Collections.max(maxes));
             }
         }
     }
 
+    /**
+     * Custom method to compute intersection of two HashSets of Deltas
+     */
     public HashSet<Delta> intersection(HashSet<Delta> list1, HashSet<Delta> list2) {
         HashSet<Delta> list = new HashSet<>();
 

@@ -10,6 +10,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Extends class PreciseParticipant to leverage base implementation methods
+ * Here there are different method call to compute reconciliation
+ * and gossip message creation.
+ * All the flow control logic is implemented in PreciseParticipant, here we just call
+ * the methods inside the gossip exchange methods, which are the same as in Precise.
+ * The only differences are the method calls to storage.
+ */
 public class ScuttlebuttParticipant extends PreciseParticipant {
 
     public ScuttlebuttParticipant(int id, CustomLogger.LOG_LEVEL level) {
@@ -41,6 +49,10 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
         }
     }
 
+    /**
+     * First phase: receiving the StartGossip message sent by p
+     * Store the digest sent by p, then send back q's digest
+     */
     protected void startGossip(StartGossip message){
         logger.info("First phase: Digest from " + getSender());
 
@@ -53,6 +65,12 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
         getSender().tell(new GossipMessage(false, storage.createScuttlebuttDigest(), this.desiredUR, this.updateRate), self());
     }
 
+    /**
+     * Handle second, third and fourth phase of gossip exchange.
+     * Once p receives the digest from q, it computes its local differences
+     * and sends deltas to q (third pahse). Then q retrieves p's digest
+     * from its map and does the same thing, sending back to p some deltas (fourth phase)
+     */
     protected void gossipMessage(GossipMessage message){
         // p sent to q the updates
         if (message.isSender()) {
@@ -95,7 +113,6 @@ public class ScuttlebuttParticipant extends PreciseParticipant {
                     // here we calculate the new flow control parameters updating the local maximum update rate
                     // the sender update rate gets included in the gossip message to q
                     if (this.desiredUR == 0){
-                        // TODO: check this
                         senderupdateRate = 0;
                     }else {
                         senderupdateRate = computeUpdateRate(message.getMaximumUR(), message.getDesiredUR());

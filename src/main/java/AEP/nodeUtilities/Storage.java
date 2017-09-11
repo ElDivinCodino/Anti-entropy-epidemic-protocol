@@ -10,11 +10,15 @@ import static AEP.PreciseParticipant.Ordering;
  */
 public class Storage {
 
+    // all deltas stored for one participant
     private ArrayList<Delta> participantStates = new ArrayList<>();
     private CustomLogger logger;
     private String pathname;
+    // number of keys for each participant
     private int tuplesNumber;
+    // #participants for this experiment
     private int participantNumber;
+    // the id of the participant owner
     private int id;
 
     public Storage(String pathname, int participantsNumber, int tuplesNumber, int id, CustomLogger logger) {
@@ -145,10 +149,8 @@ public class Storage {
     }
 
     /**
-     * TODO: controlla il comment, ci sono degli errori di legacy
      * This method provides the computation of the differences between the received digest and the current states.
-     * If the received digest has tuples with higher version, it means that the peer knows a needed update; otherwise inform
-     * the peer to not be interested in that information by setting its value to null
+     * If the received digest has tuples with higher version, it means that the peer knows a needed update
      * @param digest the digest coming from the other peer
      * @return a TreeMap indicating the values which needs to be updated
      */
@@ -219,6 +221,10 @@ public class Storage {
         return mapDeltas;
     }
 
+    /**
+     * Take as input a list of deltas (to be sent to another participant)
+     * and apply an ordering rule to take MTU deltas
+     */
     public synchronized ArrayList<Delta> mtuResizeAndSort(ArrayList<Delta> state, int mtuSize, Comparator<Delta> comparator, Ordering method) {
 
         if (state.size() <= mtuSize){
@@ -226,10 +232,12 @@ public class Storage {
         }
         ArrayList<Delta> mtuArrayList = new ArrayList<>();
 
+        // sort deltas using the given comparator (different whether we are using Precise of Scuttlebutt)
         state.sort(comparator);
 
         switch (method){
             case OLDEST:
+                // the comparator already sorted the deltas accordingly
                 mtuArrayList.addAll(state.subList(0, mtuSize));
                 break;
             case NEWEST:
@@ -237,6 +245,7 @@ public class Storage {
                 Collections.reverse(mtuArrayList);
                 break;
             case SCUTTLEBREADTH:
+                // take deltas from as many participants as possible.
                 TreeMap<Long, ArrayList<Delta>> mapDeltas = statesToTreeMap(state);
                 ArrayList<Long> randomP = new ArrayList<>(mapDeltas.keySet());
                 Collections.shuffle(randomP);
@@ -254,6 +263,7 @@ public class Storage {
                 }
                 break;
             case SCUTTLEDEPTH:
+                // start taking deltas from the participant that wants to sent the most of them
                 int randomOrder = Utilities.getRandomNum(0, 1);
                 TreeMap<Long, ArrayList<Delta>> mapDelta = statesToTreeMap(state);
 
@@ -263,7 +273,6 @@ public class Storage {
                 int j = -1;
                 // get the participants with their number of deltas
                 for(Long i : mapDelta.keySet()) {
-
                     j++;
                     process[j] = i;
                     deltasNum[j] = mapDelta.get(i).size();
@@ -286,7 +295,6 @@ public class Storage {
                         }
                     }
                     while (currentMaxDelta > 0 && mtuArrayList.size() <= mtuSize) {
-                        // TODO: scuttle depth ordering. .get(0) or get(size). Check the arrays are properly ordered from smaller to higher v number
                         mtuArrayList.add(mapDelta.get(currentMaxProcess).get(0));
                         mapDelta.get(currentMaxProcess).remove(0);
                         currentMaxDelta--;

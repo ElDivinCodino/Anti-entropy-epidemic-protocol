@@ -10,6 +10,7 @@ import akka.actor.ActorRef;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+
 /**
  * Extends class Participant to leverage base implementation methods
  * Here there are different method call to compute reconciliation
